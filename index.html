@@ -398,7 +398,7 @@ function zip3ToState(zip) {
 
   var S = {
     zip:"", state:"", county:"", priorities:{}, results:[], chosenPlan:null,
-    dob:"", hasMedicaid:false, hasVA:false, hasTricare:false, hasEmployer:false,
+    age:"", hasMedicaid:false, hasVA:false, hasTricare:false, hasEmployer:false,
     chronicConditions:{}, hasDisability:null
   };
   var STEP = "hero"; // hero -> zip -> county -> dob -> coverage -> chronic -> disability -> priorities -> matching -> results -> confirm
@@ -438,7 +438,7 @@ function zip3ToState(zip) {
   var STEP_ORDER = ["zip","county","dob","coverage","chronic","disability","priorities","results"];
   var STEP_LABELS = {
     zip:"Step 1 of 8 — Your area", county:"Step 2 of 8 — Your county",
-    dob:"Step 3 of 8 — Date of birth", coverage:"Step 4 of 8 — Other coverage",
+    dob:"Step 3 of 8 — Your age", coverage:"Step 4 of 8 — Other coverage",
     chronic:"Step 5 of 8 — Health conditions", disability:"Step 6 of 8 — Disability status",
     priorities:"Step 7 of 8 — What matters to you", results:"Step 8 of 8 — Your matches"
   };
@@ -757,29 +757,31 @@ function zip3ToState(zip) {
 
   function renderDob(){
     var shell = qStepShell(
-      "About you", "What’s your date of birth?",
+      "About you", "What’s your age?",
       "This helps make sure we show you plans you actually qualify for.",
       null, function(){ STEP = "county"; render(); }, "Continue →", null
     );
     var block = el("div", "q-block");
-    block.innerHTML = '<label class="field-label" for="dob-input">Date of birth</label>';
-    var dobInput = el("input", "input");
-    dobInput.id = "dob-input"; dobInput.type = "date"; dobInput.value = S.dob;
-    dobInput.max = new Date().toISOString().substring(0,10);
-    var dobHint = el("div", "hint");
-    block.appendChild(dobInput); block.appendChild(dobHint);
+    block.innerHTML = '<label class="field-label" for="age-input">Age</label>';
+    var ageInput = el("input", "input");
+    ageInput.id = "age-input"; ageInput.type = "tel"; ageInput.inputMode = "numeric";
+    ageInput.maxLength = 3; ageInput.placeholder = "e.g. 67"; ageInput.value = S.age;
+    var ageHint = el("div", "hint");
+    block.appendChild(ageInput); block.appendChild(ageHint);
     function updateHint(){
-      if (S.dob){
-        var age = Math.floor((new Date() - new Date(S.dob)) / (365.25*24*3600*1000));
-        dobHint.textContent = "→ Age: " + age;
-      } else { dobHint.textContent = ""; }
+      var digits = ageInput.value.replace(/\D/g,"");
+      if (digits !== ageInput.value) ageInput.value = digits;
+      S.age = digits;
+      if (digits && (Number(digits) < 18 || Number(digits) > 110)){
+        ageHint.textContent = "Please enter a valid age.";
+      } else { ageHint.textContent = ""; }
     }
-    dobInput.addEventListener("change", function(){ S.dob = dobInput.value; updateHint(); });
+    ageInput.addEventListener("input", updateHint);
     updateHint();
     shell.finishRow([block]);
     var nextBtn = shell.s.querySelector(".btn-primary");
     nextBtn.onclick = function(){ STEP = "coverage"; render(); };
-    setTimeout(function(){ dobInput.focus(); }, 50);
+    setTimeout(function(){ ageInput.focus(); }, 50);
   }
 
   function renderCoverage(){
