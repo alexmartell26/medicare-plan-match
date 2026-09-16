@@ -399,9 +399,10 @@ function zip3ToState(zip) {
   var S = {
     zip:"", state:"", county:"", priorities:{}, results:[], chosenPlan:null,
     age:"", hasMedicaid:false, hasVA:false, hasTricare:false, hasEmployer:false,
-    chronicConditions:{}, hasDisability:null
+    chronicConditions:{}, hasDisability:null, hasPartsAB:null
   };
-  var STEP = "hero"; // hero -> zip -> county -> dob -> coverage -> chronic -> disability -> priorities -> matching -> results -> confirm
+  var DISQUALIFY_URL = "https://nationalcareoptions.com/lp/marg-medicare?lpsid=source&click_id=";
+  var STEP = "hero"; // hero -> partsab -> zip -> county -> dob -> coverage -> chronic -> disability -> priorities -> matching -> results -> confirm
 
   var CHRONIC_CONDITIONS = [
     "Diabetes","Heart Failure","Chronic Lung Disorders (COPD)","Chronic Kidney Disease",
@@ -435,12 +436,12 @@ function zip3ToState(zip) {
   function el(tag, cls, html){ var d = document.createElement(tag); if(cls) d.className = cls; if(html!==undefined) d.innerHTML = html; return d; }
 
   // ── Progress ─────────────────────────────────────────────
-  var STEP_ORDER = ["zip","county","dob","coverage","chronic","disability","priorities","results"];
+  var STEP_ORDER = ["partsab","zip","county","dob","coverage","chronic","disability","priorities","results"];
   var STEP_LABELS = {
-    zip:"Step 1 of 8 — Your area", county:"Step 2 of 8 — Your county",
-    dob:"Step 3 of 8 — Your age", coverage:"Step 4 of 8 — Other coverage",
-    chronic:"Step 5 of 8 — Health conditions", disability:"Step 6 of 8 — Disability status",
-    priorities:"Step 7 of 8 — What matters to you", results:"Step 8 of 8 — Your matches"
+    partsab:"Step 1 of 9 — Medicare Parts A & B", zip:"Step 2 of 9 — Your area", county:"Step 3 of 9 — Your county",
+    dob:"Step 4 of 9 — Your age", coverage:"Step 5 of 9 — Other coverage",
+    chronic:"Step 6 of 9 — Health conditions", disability:"Step 7 of 9 — Disability status",
+    priorities:"Step 8 of 9 — What matters to you", results:"Step 9 of 9 — Your matches"
   };
   function updateProgress(){
     var shell = document.getElementById("progressShell");
@@ -586,6 +587,7 @@ function zip3ToState(zip) {
     app.innerHTML = "";
     updateProgress();
     if (STEP === "hero") renderHero();
+    else if (STEP === "partsab") renderPartsAB();
     else if (STEP === "zip") renderZip();
     else if (STEP === "county") renderCounty();
     else if (STEP === "dob") renderDob();
@@ -610,7 +612,7 @@ function zip3ToState(zip) {
     btnWrap.style.cssText = "display:flex; flex-direction:column; align-items:center; margin-top:26px;";
     var btn = el("button", "btn btn-gold", "Find My Plan &nbsp;→");
     btn.style.fontSize = "18px"; btn.style.padding = "17px 34px";
-    btn.onclick = function(){ STEP = "zip"; render(); };
+    btn.onclick = function(){ STEP = "partsab"; render(); };
     btnWrap.appendChild(btn);
     var trust = el("div", "trust-strip");
     trust.style.justifyContent = "center";
@@ -631,6 +633,30 @@ function zip3ToState(zip) {
     s.appendChild(callRow);
 
     app.appendChild(s);
+  }
+
+  function renderPartsAB(){
+    var shell = qStepShell(
+      "Before we start", "Do you have Medicare Parts A and B?",
+      "Medicare Advantage plans require you to already be enrolled in both Original Medicare Part A and Part B.",
+      null, function(){ STEP = "hero"; render(); }, "Continue →", null
+    );
+    var block = el("div", "q-block");
+    var row = el("div", "yn-row");
+    var yesBtn = el("button", "yn-btn" + (S.hasPartsAB === "yes" ? " on" : ""), "Yes");
+    var noBtn = el("button", "yn-btn" + (S.hasPartsAB === "no" ? " on" : ""), "No");
+    yesBtn.type = "button"; noBtn.type = "button";
+    yesBtn.onclick = function(){ S.hasPartsAB = "yes"; yesBtn.classList.add("on"); noBtn.classList.remove("on"); nextBtn.disabled = false; };
+    noBtn.onclick = function(){ S.hasPartsAB = "no"; noBtn.classList.add("on"); yesBtn.classList.remove("on"); nextBtn.disabled = false; };
+    row.appendChild(yesBtn); row.appendChild(noBtn);
+    block.appendChild(row);
+    shell.finishRow([block]);
+    var nextBtn = shell.s.querySelector(".btn-primary");
+    nextBtn.disabled = !S.hasPartsAB;
+    nextBtn.onclick = function(){
+      if (S.hasPartsAB === "no"){ window.location.href = DISQUALIFY_URL; return; }
+      STEP = "zip"; render();
+    };
   }
 
   function renderZip(){
