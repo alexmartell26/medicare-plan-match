@@ -715,6 +715,29 @@ function zip3ToState(zip) {
     } catch(e){}
   }
 
+  // ── Step narration audio ────────────────────────────────
+  var STEP_AUDIO = {
+    partsab: "audio/step1.mp3", zip: "audio/step2.mp3", county: "audio/step3.mp3",
+    dob: "audio/step4.mp3", coverage: "audio/step5.mp3", chronic: "audio/step6.mp3",
+    disability: "audio/step7.mp3", priorities: "audio/step8.mp3", results: "audio/step9.mp3",
+    confirm: "audio/call.mp3"
+  };
+  var stepAudioEl = new Audio();
+  var currentStepAudioKey = null;
+  function playStepAudio(){
+    stepAudioEl.pause();
+    var src = STEP_AUDIO[STEP];
+    if (!src){ currentStepAudioKey = null; return; }
+    if (currentStepAudioKey !== STEP){
+      stepAudioEl.src = src;
+      currentStepAudioKey = STEP;
+    }
+    try { stepAudioEl.currentTime = 0; } catch(e){}
+    var p = stepAudioEl.play();
+    if (p && p.catch) p.catch(function(){});
+  }
+  var idleAudioEl = new Audio("audio/idle.mp3");
+
   // ── Idle nudge: pulse the current primary action after 10s of no activity ──
   var idleTimer = null;
   var pulsedEls = [];
@@ -745,8 +768,15 @@ function zip3ToState(zip) {
     clearAttentionPulse();
     pulsedEls = getPrimaryActionEls();
     pulsedEls.forEach(function(elx){ elx.classList.add("pulse-attention"); });
+    // Skip if the step's own narration is still playing, so they don't overlap.
+    if (STEP !== "hero" && STEP !== "confirm" && stepAudioEl.paused){
+      try { idleAudioEl.currentTime = 0; } catch(e){}
+      var p = idleAudioEl.play();
+      if (p && p.catch) p.catch(function(){});
+    }
   }
   function resetIdleTimer(){
+    idleAudioEl.pause();
     clearTimeout(idleTimer);
     clearAttentionPulse();
     idleTimer = setTimeout(triggerAttentionPulse, 10000);
@@ -949,6 +979,7 @@ function zip3ToState(zip) {
     else if (STEP === "results") renderResults();
     else if (STEP === "confirm") renderConfirm();
     window.scrollTo({top:0, behavior:"instant"});
+    playStepAudio();
     resetIdleTimer();
   }
 
