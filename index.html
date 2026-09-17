@@ -377,7 +377,11 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .hero-benefit-card{
   display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
   border-radius:12px; padding:12px 14px; box-shadow:var(--shadow);
+  cursor:pointer; width:100%; text-align:left; font:inherit; color:inherit;
+  transition:transform .15s ease, border-color .15s ease;
 }
+.hero-benefit-card:hover{border-color:var(--gold); transform:translateY(-1px);}
+.hero-benefit-card:active{transform:scale(.98);}
 .hero-benefit-ico{width:36px; height:36px; border-radius:10px; background:var(--cream-2); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;}
 .hero-benefit-text{font-size:13.5px; font-weight:700; line-height:1.25;}
 
@@ -399,6 +403,41 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .social-proof-time{font-size:11.5px; color:var(--slate-2); margin-top:3px;}
 .social-proof-close{background:none; border:none; color:var(--slate-2); font-size:17px; line-height:1; cursor:pointer; padding:2px; margin-left:2px; flex-shrink:0;}
 @media (max-width:480px){ .social-proof{left:12px; right:12px; max-width:none;} }
+
+/* Benefit-card qualify modal */
+.benefit-modal-backdrop{
+  position:fixed; inset:0; z-index:10000; background:rgba(19,38,56,.55);
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  opacity:0; pointer-events:none; transition:opacity .25s ease;
+}
+.benefit-modal-backdrop.show{opacity:1; pointer-events:auto;}
+.benefit-modal{
+  background:var(--card); border-radius:20px; box-shadow:0 24px 60px -12px rgba(0,0,0,.35);
+  max-width:380px; width:100%; padding:30px 26px 26px; text-align:center; position:relative;
+  transform:scale(.75) translateY(10px); opacity:0;
+  transition:transform .45s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+}
+.benefit-modal-backdrop.show .benefit-modal{transform:scale(1) translateY(0); opacity:1;}
+.benefit-modal-icon{
+  width:64px; height:64px; border-radius:50%; margin:0 auto 16px; font-size:32px;
+  background:var(--green-bg); display:flex; align-items:center; justify-content:center;
+  animation:benefitIconPop .6s cubic-bezier(.34,1.56,.64,1) .15s both;
+}
+@keyframes benefitIconPop{
+  0%{ transform:scale(0) rotate(-20deg); }
+  60%{ transform:scale(1.15) rotate(8deg); }
+  100%{ transform:scale(1) rotate(0deg); }
+}
+.benefit-modal-title{font-family:'Fraunces',Georgia,serif; font-size:22px; font-weight:600; margin-bottom:10px;}
+.benefit-modal-body{font-size:15px; color:var(--slate); line-height:1.5; margin-bottom:22px;}
+.benefit-modal-close{
+  position:absolute; top:14px; right:14px; background:none; border:none; color:var(--slate-2);
+  font-size:20px; line-height:1; cursor:pointer; padding:6px;
+}
+@media (prefers-reduced-motion: reduce){
+  .benefit-modal{transition:opacity .2s ease; transform:none;}
+  .benefit-modal-icon{animation:none;}
+}
 </style>
 
 <div class="progress-shell" id="progressShell" hidden>
@@ -579,6 +618,41 @@ function zip3ToState(zip) {
     script.async = true;
     document.head.appendChild(script);
   }
+
+  // ── Benefit-card "let's see what you qualify for" modal ──
+  var benefitModalEl = null;
+  function ensureBenefitModalEl(){
+    if (!benefitModalEl){
+      benefitModalEl = el("div", "benefit-modal-backdrop");
+      benefitModalEl.innerHTML =
+        '<div class="benefit-modal">' +
+          '<button type="button" class="benefit-modal-close" aria-label="Close">×</button>' +
+          '<div class="benefit-modal-icon">🔓</div>' +
+          '<h2 class="benefit-modal-title">Let’s see what you qualify for</h2>' +
+          '<p class="benefit-modal-body">To unlock benefits like this, answer a few quick questions and we’ll show you the exact plans and amounts available to you.</p>' +
+          '<button type="button" class="btn btn-cta btn-full">Continue →</button>' +
+        '</div>';
+      document.body.appendChild(benefitModalEl);
+      benefitModalEl.addEventListener("click", function(e){
+        if (e.target === benefitModalEl) hideBenefitModal();
+      });
+      benefitModalEl.querySelector(".benefit-modal-close").onclick = hideBenefitModal;
+      benefitModalEl.querySelector(".benefit-modal .btn-cta").onclick = function(){
+        hideBenefitModal();
+        STEP = "partsab"; render();
+      };
+    }
+    return benefitModalEl;
+  }
+  function showBenefitModal(){
+    ensureBenefitModalEl().classList.add("show");
+  }
+  function hideBenefitModal(){
+    if (benefitModalEl) benefitModalEl.classList.remove("show");
+  }
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape") hideBenefitModal();
+  });
 
   // ── Sticky bottom CTA (body-level, never nested inside the animated .step) ──
   var stickyCtaEl = null;
@@ -858,6 +932,7 @@ function zip3ToState(zip) {
   function render(){
     app.innerHTML = "";
     hideStickyCta();
+    hideBenefitModal();
     stopStickyShadow();
     stopHoldCountdown();
     updateProgress();
@@ -906,8 +981,10 @@ function zip3ToState(zip) {
       ["🦷", "Dental, vision & hearing coverage"]
     ];
     HERO_BENEFITS.forEach(function(b){
-      var card = el("div", "hero-benefit-card");
+      var card = el("button", "hero-benefit-card");
+      card.type = "button";
       card.innerHTML = '<div class="hero-benefit-ico">' + b[0] + '</div><div class="hero-benefit-text">' + b[1] + '</div>';
+      card.onclick = showBenefitModal;
       benefitsGrid.appendChild(card);
     });
     benefits.appendChild(el("div", "hero-benefits-label", "Benefits you could unlock"));
