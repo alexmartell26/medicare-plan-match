@@ -1,5 +1,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  window.bgdataLayer = window.bgdataLayer || [];
+  function bge() { bgdataLayer.push(arguments); }
+  window.bge = window.bge || bge;
+  bge('init', "906940136949356032");
+</script>
+<script>
+  !function(e,t){try{if(!e)return;try{"undefined"!=typeof localStorage&&localStorage.setItem("pixel_storage_dm",e)}catch(e){}var n=document.createElement("script");n.src="https://"+e+"/ad/events.js?pixel_id="+t,n.async=!0,n.setAttribute("data-pixel-script-dm",e),(document.head||document.getElementsByTagName("head")[0]||document.body||document.documentElement).appendChild(n)}catch(e){}}(function(e){try{var t=new RegExp("(^|&)"+e+"=([^&]*)(&|$)"),n=window.location.search.substr(1).match(t);return null!=n?decodeURIComponent(n[2].replace(/\+/g," ")):""}catch(e){return""}}("dm")||"tk.mowell.tech","906940136949356032");
+</script>
 <title>Medicare Plan Match</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -159,6 +168,17 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
   transition:border-color .15s, background .15s;
 }
 .yn-btn.on{border-color:var(--gold); background:var(--cream-2); color:var(--gold-deep);}
+.choice-list{display:flex; flex-direction:column; gap:8px;}
+.choice-btn{
+  border:1.5px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink);
+  padding:14px 16px; font-size:15px; font-weight:600; text-align:left; cursor:pointer; width:100%;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  transition:border-color .15s, background .15s;
+}
+.choice-btn:active{transform:scale(.99);}
+.choice-btn.on{border-color:var(--gold); background:var(--cream-2); color:var(--gold-deep);}
+.choice-check{width:20px; height:20px; border-radius:99px; border:1.5px solid var(--line); flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--card);}
+.choice-btn.on .choice-check{background:var(--gold); border-color:var(--gold);}
 .snp-note{
   margin-top:12px; background:var(--green-bg); border:1px solid var(--green); border-radius:10px;
   padding:11px 14px; font-size:13px; color:var(--ink); display:flex; gap:9px; align-items:flex-start;
@@ -435,6 +455,29 @@ function zip3ToState(zip) {
   function fmt(n){ n = n||0; return "$" + Math.round(n).toLocaleString(); }
   function el(tag, cls, html){ var d = document.createElement(tag); if(cls) d.className = cls; if(html!==undefined) d.innerHTML = html; return d; }
 
+  // ── URL param tracking ──────────────────────────────────
+  function setParam(key, val){
+    try {
+      var url = new URL(window.location.href);
+      if (val === undefined || val === null || val === "") url.searchParams.delete(key);
+      else url.searchParams.set(key, val);
+      window.history.replaceState(null, "", url.toString());
+    } catch(e){}
+  }
+  function updateBenefitParams(){
+    var order = Object.keys(S.priorities).filter(function(k){
+      return S.priorities[k] && FORCED_PRIORITY_KEYS.indexOf(k) === -1;
+    });
+    try {
+      var url = new URL(window.location.href);
+      Array.from(url.searchParams.keys()).forEach(function(k){
+        if (/^benefit\d+$/.test(k)) url.searchParams.delete(k);
+      });
+      order.forEach(function(key, i){ url.searchParams.set("benefit" + (i+1), key); });
+      window.history.replaceState(null, "", url.toString());
+    } catch(e){}
+  }
+
   // ── Progress ─────────────────────────────────────────────
   var STEP_ORDER = ["partsab","zip","county","dob","coverage","chronic","disability","priorities","results"];
   var STEP_LABELS = {
@@ -639,32 +682,32 @@ function zip3ToState(zip) {
     var shell = qStepShell(
       "Before we start", "Do you have Medicare Parts A and B?",
       "Medicare Advantage plans require you to already be enrolled in both Original Medicare Part A and Part B.",
-      null, function(){ STEP = "hero"; render(); }, "Continue →", null
+      null, function(){ STEP = "hero"; render(); }, null, null, true
     );
     var block = el("div", "q-block");
     var row = el("div", "yn-row");
     var yesBtn = el("button", "yn-btn" + (S.hasPartsAB === "yes" ? " on" : ""), "Yes");
     var noBtn = el("button", "yn-btn" + (S.hasPartsAB === "no" ? " on" : ""), "No");
     yesBtn.type = "button"; noBtn.type = "button";
-    yesBtn.onclick = function(){ S.hasPartsAB = "yes"; yesBtn.classList.add("on"); noBtn.classList.remove("on"); nextBtn.disabled = false; };
-    noBtn.onclick = function(){ S.hasPartsAB = "no"; noBtn.classList.add("on"); yesBtn.classList.remove("on"); nextBtn.disabled = false; };
+    yesBtn.onclick = function(){ S.hasPartsAB = "yes"; setParam("mediab", "true"); STEP = "zip"; render(); };
+    noBtn.onclick = function(){ S.hasPartsAB = "no"; setParam("mediab", "false"); window.location.href = DISQUALIFY_URL; };
     row.appendChild(yesBtn); row.appendChild(noBtn);
     block.appendChild(row);
     shell.finishRow([block]);
-    var nextBtn = shell.s.querySelector(".btn-primary");
-    nextBtn.disabled = !S.hasPartsAB;
-    nextBtn.onclick = function(){
-      if (S.hasPartsAB === "no"){ window.location.href = DISQUALIFY_URL; return; }
-      STEP = "zip"; render();
-    };
   }
 
   function renderZip(){
     var s = el("div", "step");
-    s.innerHTML =
+    var backLink = el("button", "back-link", "← Back");
+    backLink.type = "button";
+    backLink.onclick = function(){ STEP = "partsab"; render(); };
+    s.appendChild(backLink);
+    var head = el("div");
+    head.innerHTML =
       '<div class="eyebrow">Your area</div>' +
       '<h1 class="headline">Where should we look for plans?</h1>' +
       '<p class="sub">Medicare Advantage plans are available by county — your ZIP code tells us where to search.</p>';
+    s.appendChild(head);
 
     var field = el("div", "");
     field.style.marginTop = "22px";
@@ -678,15 +721,15 @@ function zip3ToState(zip) {
     field.appendChild(label); field.appendChild(input); field.appendChild(hint);
 
     var btnRow = el("div", "btn-row");
-    var backBtn = el("button", "btn btn-ghost", "← Back");
-    backBtn.onclick = function(){ STEP = "hero"; render(); };
-    var nextBtn = el("button", "btn btn-primary", "Continue →");
+    btnRow.style.flexDirection = "column"; btnRow.style.alignItems = "stretch";
+    var nextBtn = el("button", "btn btn-primary btn-full", "Continue →");
     nextBtn.disabled = !S.state;
     nextBtn.onclick = function(){
       if (!S.state) return;
+      setParam("collectedzipcode", S.zip);
       STEP = "county"; render();
     };
-    btnRow.appendChild(backBtn); btnRow.appendChild(nextBtn);
+    btnRow.appendChild(nextBtn);
 
     function handleInput(){
       var v = input.value.replace(/\D/g,"").substring(0,5);
@@ -711,41 +754,57 @@ function zip3ToState(zip) {
 
   function renderCounty(){
     var s = el("div", "step");
-    s.innerHTML =
+    var backLink = el("button", "back-link", "← Back");
+    backLink.type = "button";
+    backLink.onclick = function(){ STEP = "zip"; render(); };
+    s.appendChild(backLink);
+    var head = el("div");
+    head.innerHTML =
       '<div class="eyebrow">Your county</div>' +
       '<h1 class="headline">Confirm your county</h1>' +
       '<p class="sub">Plans vary by county even within the same state — this makes sure your matches are accurate.</p>';
+    s.appendChild(head);
 
     var field = el("div", "");
     field.style.marginTop = "22px";
     var label = el("label", "field-label", "County, " + S.state);
-    var select = el("select", "input");
-    select.id = "county-select";
-    var counties = narrowedCounties(S.zip, S.state);
-    var opts = '<option value="">— Select county —</option>' + counties.map(function(c){
-      return '<option value="' + c + '"' + (c === S.county ? " selected" : "") + '>' + c + '</option>';
-    }).join("");
-    select.innerHTML = opts;
+    var list = el("div", "choice-list");
     var note = el("div", "county-note", "Not seeing your county? <a href=\"#\" id=\"allCountiesLink\" style=\"color:var(--navy);font-weight:700;\">Show all " + S.state + " counties</a>");
-    field.appendChild(label); field.appendChild(select); field.appendChild(note);
+    field.appendChild(label); field.appendChild(list); field.appendChild(note);
 
     var btnRow = el("div", "btn-row");
-    var backBtn = el("button", "btn btn-ghost", "← Back");
-    backBtn.onclick = function(){ STEP = "zip"; render(); };
-    var nextBtn = el("button", "btn btn-primary", "Continue →");
+    btnRow.style.flexDirection = "column"; btnRow.style.alignItems = "stretch";
+    var nextBtn = el("button", "btn btn-primary btn-full", "Continue →");
     nextBtn.disabled = !S.county;
     nextBtn.onclick = function(){ if (!S.county) return; STEP = "dob"; render(); };
-    btnRow.appendChild(backBtn); btnRow.appendChild(nextBtn);
+    btnRow.appendChild(nextBtn);
 
-    select.addEventListener("change", function(){ S.county = select.value; nextBtn.disabled = !S.county; });
+    function buildButtons(counties){
+      list.innerHTML = "";
+      counties.forEach(function(c){
+        var btn = el("button", "choice-btn" + (c === S.county ? " on" : ""));
+        btn.type = "button";
+        btn.innerHTML = "<span>" + c + "</span><span class=\"choice-check\">" + (c === S.county ? checkSvg() : "") + "</span>";
+        btn.onclick = function(){
+          S.county = c;
+          list.querySelectorAll(".choice-btn").forEach(function(b){
+            b.classList.remove("on"); b.querySelector(".choice-check").innerHTML = "";
+          });
+          btn.classList.add("on");
+          btn.querySelector(".choice-check").innerHTML = checkSvg();
+          nextBtn.disabled = false;
+          setParam("county", c);
+        };
+        list.appendChild(btn);
+      });
+    }
+    buildButtons(narrowedCounties(S.zip, S.state));
+
     setTimeout(function(){
       var link = document.getElementById("allCountiesLink");
       if (link) link.addEventListener("click", function(e){
         e.preventDefault();
-        var all = (window.CMS_COUNTIES[S.state] || []);
-        select.innerHTML = '<option value="">— Select county —</option>' + all.map(function(c){
-          return '<option value="' + c + '"' + (c === S.county ? " selected" : "") + '>' + c + '</option>';
-        }).join("");
+        buildButtons(window.CMS_COUNTIES[S.state] || []);
         note.textContent = "";
       });
     }, 0);
@@ -755,26 +814,32 @@ function zip3ToState(zip) {
   }
 
   // ── Qualifying questions — one per screen, senior-friendly ──────────────
-  function qStepShell(eyebrow, headline, sub, backStep, onBack, nextLabel, onNext){
+  function qStepShell(eyebrow, headline, sub, backStep, onBack, nextLabel, onNext, noContinueBtn){
     var s = el("div", "step");
-    s.innerHTML =
+    if (onBack){
+      var backLink = el("button", "back-link", "← Back");
+      backLink.type = "button";
+      backLink.onclick = onBack;
+      s.appendChild(backLink);
+    }
+    var head = el("div");
+    head.innerHTML =
       '<div class="eyebrow">' + eyebrow + '</div>' +
       '<h1 class="headline">' + headline + '</h1>' +
       (sub ? '<p class="sub">' + sub + '</p>' : '');
+    s.appendChild(head);
     var privacy = el("div", "privacy-note", "Your answers are only used to match you with the right plans and are shared with the licensed agent who follows up with you.");
     return { s: s, privacy: privacy,
       finishRow: function(bodyEls, nextEnabledFn){
         bodyEls.forEach(function(b){ s.appendChild(b); });
-        var btnRow = el("div", "btn-row");
-        var backBtn = el("button", "btn btn-ghost", "← Back");
-        backBtn.onclick = onBack;
-        var nextBtn = el("button", "btn btn-primary btn-full", nextLabel || "Continue →");
-        nextBtn.onclick = onNext;
-        btnRow.style.flexDirection = "column"; btnRow.style.alignItems = "stretch";
-        var backRow = el("div"); backRow.appendChild(backBtn);
-        btnRow.appendChild(nextBtn);
-        s.appendChild(backRow);
-        s.appendChild(btnRow);
+        if (!noContinueBtn){
+          var btnRow = el("div", "btn-row");
+          var nextBtn = el("button", "btn btn-primary btn-full", nextLabel || "Continue →");
+          nextBtn.onclick = onNext;
+          btnRow.style.flexDirection = "column"; btnRow.style.alignItems = "stretch";
+          btnRow.appendChild(nextBtn);
+          s.appendChild(btnRow);
+        }
         s.appendChild(privacy);
         app.appendChild(s);
       }
@@ -806,7 +871,7 @@ function zip3ToState(zip) {
     updateHint();
     shell.finishRow([block]);
     var nextBtn = shell.s.querySelector(".btn-primary");
-    nextBtn.onclick = function(){ STEP = "coverage"; render(); };
+    nextBtn.onclick = function(){ setParam("age", S.age); STEP = "coverage"; render(); };
     setTimeout(function(){ ageInput.focus(); }, 50);
   }
 
@@ -818,17 +883,21 @@ function zip3ToState(zip) {
     );
     var block = el("div", "q-block");
     var grid = el("div", "pill-grid");
-    var covOptions = [["hasMedicaid","Medicaid"],["hasVA","VA Benefits"],["hasTricare","TRICARE"],["hasEmployer","Employer Coverage"]];
+    var covOptions = [["hasMedicaid","Medicaid","medicaid"],["hasVA","VA Benefits","vacoverage"],["hasTricare","TRICARE","tricare"],["hasEmployer","Employer Coverage","employer"]];
     var covNextBtnRef;
     function anyCovSelected(){ return covOptions.some(function(opt){ return !!S[opt[0]]; }); }
     function updateCovNextLabel(){
       if (covNextBtnRef) covNextBtnRef.textContent = anyCovSelected() ? "Continue →" : "No, Continue →";
     }
+    function updateCoverageParam(){
+      var selected = covOptions.filter(function(opt){ return !!S[opt[0]]; }).map(function(opt){ return opt[2]; });
+      setParam("additional_coverage", selected.join(","));
+    }
     covOptions.forEach(function(opt){
       var key = opt[0], label = opt[1];
       var pill = el("button", "pill" + (S[key] ? " on" : ""), '<span class="pill-dot"></span>' + label);
       pill.type = "button";
-      pill.onclick = function(){ S[key] = !S[key]; pill.classList.toggle("on"); updateCovNextLabel(); };
+      pill.onclick = function(){ S[key] = !S[key]; pill.classList.toggle("on"); updateCovNextLabel(); updateCoverageParam(); };
       grid.appendChild(pill);
     });
     block.appendChild(grid);
@@ -854,6 +923,10 @@ function zip3ToState(zip) {
     function updateNextLabel(){
       if (nextBtnRef) nextBtnRef.textContent = hasAnyChronicCondition() ? "Continue →" : "No, Continue →";
     }
+    function updateConditionParam(){
+      var selected = CHRONIC_CONDITIONS.filter(function(c){ return !!S.chronicConditions[c]; });
+      setParam("condition", selected.join(","));
+    }
     CHRONIC_CONDITIONS.forEach(function(cond){
       var pill = el("button", "pill" + (S.chronicConditions[cond] ? " on" : ""), '<span class="pill-dot"></span>' + cond);
       pill.type = "button";
@@ -862,6 +935,7 @@ function zip3ToState(zip) {
         pill.classList.toggle("on");
         snpNote.style.display = hasAnyChronicCondition() ? "" : "none";
         updateNextLabel();
+        updateConditionParam();
       };
       grid.appendChild(pill);
     });
@@ -889,8 +963,8 @@ function zip3ToState(zip) {
     var yesBtn = el("button", "yn-btn" + (S.hasDisability === "yes" ? " on" : ""), "Yes");
     var noBtn = el("button", "yn-btn" + (S.hasDisability === "no" ? " on" : ""), "No");
     yesBtn.type = "button"; noBtn.type = "button";
-    yesBtn.onclick = function(){ S.hasDisability = "yes"; yesBtn.classList.add("on"); noBtn.classList.remove("on"); updateDisNextLabel(); };
-    noBtn.onclick = function(){ S.hasDisability = "no"; noBtn.classList.add("on"); yesBtn.classList.remove("on"); updateDisNextLabel(); };
+    yesBtn.onclick = function(){ S.hasDisability = "yes"; yesBtn.classList.add("on"); noBtn.classList.remove("on"); updateDisNextLabel(); setParam("disability", "true"); };
+    noBtn.onclick = function(){ S.hasDisability = "no"; noBtn.classList.add("on"); yesBtn.classList.remove("on"); updateDisNextLabel(); setParam("disability", "false"); };
     row.appendChild(yesBtn); row.appendChild(noBtn);
     block.appendChild(row);
     shell.finishRow([block]);
@@ -902,10 +976,16 @@ function zip3ToState(zip) {
 
   function renderPriorities(){
     var s = el("div", "step");
-    s.innerHTML =
+    var backLink = el("button", "back-link", "← Back");
+    backLink.type = "button";
+    backLink.onclick = function(){ STEP = "disability"; render(); };
+    s.appendChild(backLink);
+    var head = el("div");
+    head.innerHTML =
       '<div class="eyebrow">What matters to you</div>' +
       '<h1 class="headline">What matters most in a plan?</h1>' +
       '<p class="sub">Pick as many as you like. We’ll rank your matches by how well they cover what you chose.</p>';
+    s.appendChild(head);
 
     // Figure out the best real-world amount available for each benefit in this
     // county/eligibility combo, so each card promises a specific number instead of
@@ -954,21 +1034,18 @@ function zip3ToState(zip) {
         S.priorities[def.key] = !S.priorities[def.key];
         card.classList.toggle("on");
         card.querySelector(".pri-check").innerHTML = S.priorities[def.key] ? checkSvg() : "";
+        updateBenefitParams();
       };
       grid.appendChild(card);
     });
 
     var btnRow = el("div", "btn-row");
-    var backBtn = el("button", "btn btn-ghost", "← Back");
-    backBtn.onclick = function(){ STEP = "disability"; render(); };
     var nextBtn = el("button", "btn btn-primary btn-full", "See My Matches →");
     nextBtn.onclick = function(){ STEP = "matching"; render(); runMatching(); };
     btnRow.style.flexDirection = "column"; btnRow.style.alignItems = "stretch";
-    var backRow = el("div"); backRow.appendChild(backBtn);
     btnRow.appendChild(nextBtn);
 
     s.appendChild(grid);
-    s.appendChild(backRow);
     s.appendChild(btnRow);
     app.appendChild(s);
   }
@@ -1101,7 +1178,11 @@ function zip3ToState(zip) {
 
         var cta = el("div", "plan-cta");
         var chooseBtn = el("button", "btn btn-primary btn-full", "Choose This Plan");
-        chooseBtn.onclick = (function(p){ return function(){ S.chosenPlan = p; STEP = "confirm"; render(); }; })(plan);
+        chooseBtn.onclick = (function(p){ return function(){
+          S.chosenPlan = p;
+          setParam("plan_number", p._hnum + (p._segLabel ? "_" + p._segLabel : ""));
+          STEP = "confirm"; render();
+        }; })(plan);
         cta.appendChild(chooseBtn);
         card.appendChild(cta);
 
