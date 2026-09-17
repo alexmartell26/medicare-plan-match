@@ -576,9 +576,6 @@ function zip3ToState(zip) {
 
   var AGENT_PHONE_DISPLAY = "1-833-700-5509";
   var AGENT_PHONE_TEL = "+18337005509";
-  // Hero page only — every other call touchpoint uses AGENT_PHONE_TEL above.
-  var HERO_PHONE_DISPLAY = "1-844-656-4232";
-  var HERO_PHONE_TEL = "+18446564232";
 
   var S = {
     zip:"", state:"", county:"", priorities:{}, results:[], chosenPlan:null,
@@ -1044,11 +1041,6 @@ function zip3ToState(zip) {
       '<p>We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov, 1-800-MEDICARE, or your local State Health Insurance Assistance Program (SHIP) to get information on all of your options.</p>' +
       '<p>Not connected with or endorsed by the U.S. Government or the federal Medicare program.</p>';
     s.appendChild(disc);
-
-    var callRow = el("div", "");
-    callRow.style.cssText = "text-align:center; margin-top:18px;";
-    callRow.innerHTML = '<span style="font-size:13.5px;color:var(--slate)">Prefer to talk to someone right away? </span><a href="tel:' + HERO_PHONE_TEL + '" style="font-size:13.5px;font-weight:800;color:var(--navy);text-decoration:underline;">Call ' + HERO_PHONE_DISPLAY + '</a>';
-    s.appendChild(callRow);
 
     app.appendChild(s);
   }
