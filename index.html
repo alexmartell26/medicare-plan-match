@@ -1408,10 +1408,12 @@ function zip3ToState(zip) {
         card.appendChild(head2);
 
         var totalAllowance = (plan.otc||0) + (plan.gro||0) + (plan.den||0) + (plan.vis||0) + (plan.hrg||0) + (plan.trn||0);
+        var givebackAnnual = (plan.gb||0) * 12;
 
         var stats = el("div", "plan-stats");
         stats.innerHTML =
           (totalAllowance > 0 ? '<div class="stat"><div class="stat-val positive">' + fmt(totalAllowance) + '/yr</div><div class="stat-lbl">Total allowance</div></div>' : '') +
+          (givebackAnnual > 0 ? '<div class="stat"><div class="stat-val positive">' + fmt(givebackAnnual) + '/yr</div><div class="stat-lbl">Part B giveback</div></div>' : '') +
           '<div class="stat"><div class="stat-val' + (plan.pc ? "" : " positive") + '">' + (plan.pc ? fmt(plan.pc) : "$0") + '</div><div class="stat-lbl">Monthly premium</div></div>' +
           (plan.sr ? '<div class="stat"><div class="plan-stars">★ ' + plan.sr + '/5</div></div>' : '');
         card.appendChild(stats);
