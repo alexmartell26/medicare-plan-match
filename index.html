@@ -390,8 +390,6 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
   transition:transform .35s ease, opacity .35s ease;
 }
 .social-proof.show{transform:translateY(0); opacity:1; pointer-events:auto;}
-.social-proof.above-sticky-cta{bottom:calc(96px + env(safe-area-inset-bottom,0px));}
-.social-proof.above-sticky-cta-tall{bottom:calc(168px + env(safe-area-inset-bottom,0px));}
 .social-proof-avatar{
   width:36px; height:36px; border-radius:50%; background:var(--navy); color:var(--gold);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;
@@ -591,11 +589,17 @@ function zip3ToState(zip) {
     }
     return stickyCtaEl;
   }
+  // The instant a sticky CTA becomes visible, any social-proof toast must go
+  // away immediately rather than just being repositioned around it.
+  function setStickyCtaVisible(wrap, visible){
+    wrap.hidden = !visible;
+    if (visible) dismissSocialProofToastNow();
+  }
   function showStickyElement(contentEl){
     var wrap = ensureStickyCtaEl();
     wrap.innerHTML = "";
     wrap.appendChild(contentEl);
-    wrap.hidden = false;
+    setStickyCtaVisible(wrap, true);
     return contentEl;
   }
   function showStickyCta(label, onClick){
@@ -631,7 +635,7 @@ function zip3ToState(zip) {
       var steps = [];
       for (var i = 0; i <= 20; i++) steps.push(i / 20);
       stickyShadowObserver = new IntersectionObserver(function(entries){
-        wrap.hidden = entries[0].intersectionRatio > 0.5;
+        setStickyCtaVisible(wrap, entries[0].intersectionRatio <= 0.5);
       }, { threshold: steps });
       stickyShadowObserver.observe(inlineEl);
     } catch(e){}
@@ -1568,10 +1572,18 @@ function zip3ToState(zip) {
     }
     return socialProofEl;
   }
+  var currentToastDismiss = null;
+  function dismissSocialProofToastNow(){
+    if (currentToastDismiss) currentToastDismiss();
+  }
   function showSocialProofToast(){
+    // Never show a toast on top of a visible sticky CTA — try again later
+    // instead of flashing it on just to immediately dismiss it.
+    if (stickyCtaEl && !stickyCtaEl.hidden){
+      scheduleNextToast(randInt(10000, 22000));
+      return;
+    }
     var box = ensureSocialProofEl();
-    box.classList.toggle("above-sticky-cta", STEP === "chronic" || STEP === "priorities");
-    box.classList.toggle("above-sticky-cta-tall", STEP === "confirm");
     var name = randPick(SOCIAL_PROOF_NAMES);
     var state = randPick(SOCIAL_PROOF_STATES);
     var benefit = randPick(SOCIAL_PROOF_BENEFITS);
@@ -1587,9 +1599,13 @@ function zip3ToState(zip) {
       '<button type="button" class="social-proof-close" aria-label="Dismiss">×</button>';
     box.classList.add("show");
     var hideTimer = setTimeout(dismiss, 6000);
-    box.querySelector(".social-proof-close").onclick = function(){ clearTimeout(hideTimer); dismiss(); };
+    box.querySelector(".social-proof-close").onclick = dismiss;
+    currentToastDismiss = dismiss;
     function dismiss(){
+      if (currentToastDismiss !== dismiss) return;
+      clearTimeout(hideTimer);
       box.classList.remove("show");
+      currentToastDismiss = null;
       scheduleNextToast(randInt(10000, 22000));
     }
   }
