@@ -372,6 +372,7 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .hero-benefits{margin-top:24px;}
 .hero-benefits-label{font-size:12.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--slate-2); text-align:center; margin-bottom:10px;}
 .hero-benefit-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.hero-benefit-grid > :last-child:nth-child(odd){grid-column:1 / -1;}
 @media (max-width:420px){ .hero-benefit-grid{grid-template-columns:1fr;} }
 .hero-benefit-card{
   display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
@@ -898,8 +899,7 @@ function zip3ToState(zip) {
     var HERO_BENEFITS = [
       ["🛒", "Groceries & OTC allowance"],
       ["💰", "Money added back to your Social Security check"],
-      ["🦷", "Dental, vision & hearing coverage"],
-      ["💵", "Plans available as low as $0/month"]
+      ["🦷", "Dental, vision & hearing coverage"]
     ];
     HERO_BENEFITS.forEach(function(b){
       var card = el("div", "hero-benefit-card");
