@@ -144,6 +144,7 @@ a{color:inherit;}
   box-shadow:0 -8px 20px -12px rgba(28,37,48,.18);
 }
 .sticky-cta .btn-full{max-width:640px; margin-inline:auto;}
+.sticky-cta .call-btn{max-width:640px; margin:0 auto;}
 
 .field-label{font-weight:700; font-size:14.5px; margin-bottom:8px; display:block;}
 .input{
@@ -377,6 +378,7 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 }
 .social-proof.show{transform:translateY(0); opacity:1; pointer-events:auto;}
 .social-proof.above-sticky-cta{bottom:calc(96px + env(safe-area-inset-bottom,0px));}
+.social-proof.above-sticky-cta-tall{bottom:calc(150px + env(safe-area-inset-bottom,0px));}
 .social-proof-avatar{
   width:36px; height:36px; border-radius:50%; background:var(--navy); color:var(--gold);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;
@@ -573,20 +575,23 @@ function zip3ToState(zip) {
   function ensureStickyCtaEl(){
     if (!stickyCtaEl){
       stickyCtaEl = el("div", "sticky-cta");
-      var btn = el("button", "btn btn-primary btn-full");
-      btn.type = "button";
-      stickyCtaEl.appendChild(btn);
       document.body.appendChild(stickyCtaEl);
     }
     return stickyCtaEl;
   }
-  function showStickyCta(label, onClick){
+  function showStickyElement(contentEl){
     var wrap = ensureStickyCtaEl();
-    var btn = wrap.querySelector("button");
+    wrap.innerHTML = "";
+    wrap.appendChild(contentEl);
+    wrap.hidden = false;
+    return contentEl;
+  }
+  function showStickyCta(label, onClick){
+    var btn = el("button", "btn btn-primary btn-full");
+    btn.type = "button";
     btn.textContent = label;
     btn.onclick = onClick;
-    wrap.hidden = false;
-    return btn;
+    return showStickyElement(btn);
   }
   function hideStickyCta(){
     if (stickyCtaEl) stickyCtaEl.hidden = true;
@@ -1416,7 +1421,6 @@ function zip3ToState(zip) {
         '<span class="call-btn-main">Tap to Call Now</span>' +
         '<span class="call-btn-sub">' + AGENT_PHONE_DISPLAY + ' · Connects instantly</span>' +
       '</span>';
-    card.appendChild(callLink);
     card.appendChild(el("div", "call-sub", hasSeg
       ? "Have your Plan Number and Segment above ready when you call · TTY users call 711"
       : "Have your Plan Number above ready when you call · TTY users call 711"));
@@ -1440,7 +1444,9 @@ function zip3ToState(zip) {
       '<p><strong>[AGENCY NAME]</strong> is a licensed insurance agency. Not connected with or endorsed by the U.S. Government or the federal Medicare program. We do not offer every plan available in your area — any information we provide is limited to the plans we do offer. Contact Medicare.gov, 1-800-MEDICARE, or your local SHIP for help with all of your options.</p>';
     s.appendChild(disc);
 
+    s.style.paddingBottom = "130px";
     app.appendChild(s);
+    showStickyElement(callLink);
     startHoldCountdown();
   }
 
@@ -1497,6 +1503,7 @@ function zip3ToState(zip) {
   function showSocialProofToast(){
     var box = ensureSocialProofEl();
     box.classList.toggle("above-sticky-cta", STEP === "chronic" || STEP === "priorities");
+    box.classList.toggle("above-sticky-cta-tall", STEP === "confirm");
     var name = randPick(SOCIAL_PROOF_NAMES);
     var state = randPick(SOCIAL_PROOF_STATES);
     var benefit = randPick(SOCIAL_PROOF_BENEFITS);
