@@ -1223,6 +1223,10 @@ function zip3ToState(zip) {
     ageInput.maxLength = 3; ageInput.placeholder = "e.g. 67"; ageInput.value = S.age;
     var ageHint = el("div", "hint");
     block.appendChild(ageInput); block.appendChild(ageHint);
+    function isValidAge(){
+      var digits = ageInput.value.replace(/\D/g,"");
+      return !!digits && Number(digits) >= 18 && Number(digits) <= 110;
+    }
     function updateHint(){
       var digits = ageInput.value.replace(/\D/g,"");
       if (digits !== ageInput.value) ageInput.value = digits;
@@ -1230,12 +1234,13 @@ function zip3ToState(zip) {
       if (digits && (Number(digits) < 18 || Number(digits) > 110)){
         ageHint.textContent = "Please enter a valid age.";
       } else { ageHint.textContent = ""; }
+      if (nextBtn) nextBtn.disabled = !isValidAge();
     }
     ageInput.addEventListener("input", updateHint);
-    updateHint();
     shell.finishRow([block]);
     var nextBtn = shell.s.querySelector(".btn-primary");
-    nextBtn.onclick = function(){ setParam("age", S.age); STEP = "coverage"; render(); };
+    updateHint();
+    nextBtn.onclick = function(){ if (!isValidAge()) return; setParam("age", S.age); STEP = "coverage"; render(); };
     setTimeout(function(){ ageInput.focus(); }, 50);
   }
 
