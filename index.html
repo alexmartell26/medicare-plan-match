@@ -280,6 +280,12 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .foot-links a{color:var(--navy); font-weight:700; text-decoration:underline;}
 
 .county-note{font-size:12.5px; color:var(--slate); margin-top:8px;}
+.county-instruction{
+  margin:18px 0 16px; background:var(--cream-2); border:2px solid var(--gold);
+  border-radius:12px; padding:14px 16px; font-size:16px; font-weight:800;
+  color:var(--navy-deep); display:flex; gap:10px; align-items:center; line-height:1.35;
+}
+.county-instruction .arrow{font-size:22px; flex-shrink:0;}
 .back-link{display:inline-flex; align-items:center; gap:5px; font-size:13.5px; font-weight:700; color:var(--slate); cursor:pointer; margin-bottom:16px; background:none; border:none; padding:4px 0;}
 .back-link:hover{color:var(--ink);}
 
@@ -775,6 +781,10 @@ function zip3ToState(zip) {
       '<h1 class="headline">Confirm your county</h1>' +
       '<p class="sub">Plans vary by county even within the same state — this makes sure your matches are accurate.</p>';
     s.appendChild(head);
+
+    var instruction = el("div", "county-instruction");
+    instruction.innerHTML = '<span class="arrow">👉</span><span>Please tap (click) the county you live in below — you must select one to continue.</span>';
+    s.appendChild(instruction);
 
     var field = el("div", "");
     field.style.marginTop = "22px";
