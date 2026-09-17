@@ -128,13 +128,19 @@ a{color:inherit;}
 .btn-ghost:hover{color:var(--ink);}
 .btn[disabled]{opacity:.45; cursor:not-allowed;}
 .btn-row{display:flex; flex-wrap:wrap; gap:12px; margin-top:26px; align-items:center;}
-.btn-row-sticky{
-  position:fixed; left:0; right:0; bottom:0; z-index:40; margin-top:0;
+
+/* Sticky bottom CTA — a body-level sibling of .step, never nested inside it.
+   Safari/iOS treats an element with a transform-keyframe animation (.step uses
+   "rise") as establishing a containing block for position:fixed descendants for
+   the element's whole lifetime, not just while the animation plays — so a fixed
+   button nested inside .step silently stops being fixed-to-viewport on iOS. */
+.sticky-cta{
+  position:fixed; left:0; right:0; bottom:0; z-index:40;
   background:var(--cream); border-top:1px solid var(--line);
   padding:14px 20px calc(14px + env(safe-area-inset-bottom,0px));
   box-shadow:0 -8px 20px -12px rgba(28,37,48,.18);
 }
-.btn-row-sticky .btn-full{max-width:640px; margin-inline:auto;}
+.sticky-cta .btn-full{max-width:640px; margin-inline:auto;}
 
 .field-label{font-weight:700; font-size:14.5px; margin-bottom:8px; display:block;}
 .input{
@@ -525,6 +531,30 @@ function zip3ToState(zip) {
     document.head.appendChild(script);
   }
 
+  // ── Sticky bottom CTA (body-level, never nested inside the animated .step) ──
+  var stickyCtaEl = null;
+  function ensureStickyCtaEl(){
+    if (!stickyCtaEl){
+      stickyCtaEl = el("div", "sticky-cta");
+      var btn = el("button", "btn btn-primary btn-full");
+      btn.type = "button";
+      stickyCtaEl.appendChild(btn);
+      document.body.appendChild(stickyCtaEl);
+    }
+    return stickyCtaEl;
+  }
+  function showStickyCta(label, onClick){
+    var wrap = ensureStickyCtaEl();
+    var btn = wrap.querySelector("button");
+    btn.textContent = label;
+    btn.onclick = onClick;
+    wrap.hidden = false;
+    return btn;
+  }
+  function hideStickyCta(){
+    if (stickyCtaEl) stickyCtaEl.hidden = true;
+  }
+
   function planNumberFor(p){ return p._hnum + (p._segLabel ? "_" + p._segLabel : ""); }
   function setParam(key, val){
     try {
@@ -546,6 +576,12 @@ function zip3ToState(zip) {
       order.forEach(function(key, i){ url.searchParams.set("benefit" + (i+1), key); });
       window.history.replaceState(null, "", url.toString());
     } catch(e){}
+  }
+  function updateSpecialNeedsParam(){
+    var qualifies = [];
+    if (S.hasMedicaid === true) qualifies.push("dsnp");
+    if (hasAnyChronicCondition()) qualifies.push("csnp");
+    setParam("specialneeds", qualifies.join(","));
   }
 
   // ── Progress ─────────────────────────────────────────────
@@ -698,6 +734,7 @@ function zip3ToState(zip) {
 
   function render(){
     app.innerHTML = "";
+    hideStickyCta();
     updateProgress();
     if (STEP === "hero") renderHero();
     else if (STEP === "partsab") renderPartsAB();
@@ -989,7 +1026,7 @@ function zip3ToState(zip) {
       var key = opt[0], label = opt[1];
       var pill = el("button", "pill" + (S[key] ? " on" : ""), '<span class="pill-dot"></span>' + label);
       pill.type = "button";
-      pill.onclick = function(){ S[key] = !S[key]; pill.classList.toggle("on"); updateCovNextLabel(); updateCoverageParam(); };
+      pill.onclick = function(){ S[key] = !S[key]; pill.classList.toggle("on"); updateCovNextLabel(); updateCoverageParam(); updateSpecialNeedsParam(); };
       grid.appendChild(pill);
     });
     block.appendChild(grid);
@@ -1005,15 +1042,15 @@ function zip3ToState(zip) {
     var shell = qStepShell(
       "About you", "Do you have any of these health conditions?",
       "Certain conditions can open up plans with extra care benefits built around them. Select any that apply.",
-      null, function(){ STEP = "coverage"; render(); }, "Continue →", null
+      null, function(){ STEP = "coverage"; render(); }, null, null, true
     );
     var block = el("div", "q-block");
     var grid = el("div", "cond-grid");
     var snpNote = el("div", "snp-note", "✅ <span>Based on what you selected, we’ll include specialized Chronic Condition plans in your matches. Eligibility is confirmed by your licensed agent.</span>");
     snpNote.style.display = hasAnyChronicCondition() ? "" : "none";
-    var nextBtnRef;
+    var stickyBtn;
     function updateNextLabel(){
-      if (nextBtnRef) nextBtnRef.textContent = hasAnyChronicCondition() ? "Continue →" : "No, Continue →";
+      if (stickyBtn) stickyBtn.textContent = hasAnyChronicCondition() ? "Continue →" : "No, Continue →";
     }
     function updateConditionParam(){
       var selected = CHRONIC_CONDITIONS.filter(function(c){ return !!S.chronicConditions[c]; });
@@ -1028,6 +1065,7 @@ function zip3ToState(zip) {
         snpNote.style.display = hasAnyChronicCondition() ? "" : "none";
         updateNextLabel();
         updateConditionParam();
+        updateSpecialNeedsParam();
       };
       grid.appendChild(pill);
     });
@@ -1035,12 +1073,9 @@ function zip3ToState(zip) {
     block.appendChild(snpNote);
     shell.finishRow([block]);
     shell.s.style.paddingBottom = "96px";
-    var btnRow = shell.s.querySelector(".btn-row");
-    btnRow.classList.add("btn-row-sticky");
-    var nextBtn = shell.s.querySelector(".btn-primary");
-    nextBtnRef = nextBtn;
-    nextBtn.textContent = hasAnyChronicCondition() ? "Continue →" : "No, Continue →";
-    nextBtn.onclick = function(){ STEP = "disability"; render(); };
+    stickyBtn = showStickyCta(hasAnyChronicCondition() ? "Continue →" : "No, Continue →", function(){
+      STEP = "disability"; render();
+    });
   }
 
   function renderDisability(){
