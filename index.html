@@ -290,6 +290,37 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .back-link:hover{color:var(--ink);}
 
 .empty-note{background:var(--cream-2); border:1px solid var(--line); border-radius:12px; padding:16px; font-size:14px; color:var(--slate); text-align:center;}
+
+/* Hero benefits teaser */
+.hero-benefits{margin-top:24px;}
+.hero-benefits-label{font-size:12.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--slate-2); text-align:center; margin-bottom:10px;}
+.hero-benefit-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+@media (max-width:420px){ .hero-benefit-grid{grid-template-columns:1fr;} }
+.hero-benefit-card{
+  display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+  border-radius:12px; padding:12px 14px; box-shadow:var(--shadow);
+}
+.hero-benefit-ico{width:36px; height:36px; border-radius:10px; background:var(--cream-2); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;}
+.hero-benefit-text{font-size:13.5px; font-weight:700; line-height:1.25;}
+
+/* Social proof toast */
+.social-proof{
+  position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  max-width:300px; background:var(--card); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow); padding:12px 14px; display:flex; gap:10px; align-items:flex-start;
+  z-index:9999; transform:translateY(20px); opacity:0; pointer-events:none;
+  transition:transform .35s ease, opacity .35s ease;
+}
+.social-proof.show{transform:translateY(0); opacity:1; pointer-events:auto;}
+.social-proof-avatar{
+  width:36px; height:36px; border-radius:50%; background:var(--navy); color:var(--gold);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;
+}
+.social-proof-text{font-size:13px; color:var(--ink); line-height:1.35;}
+.social-proof-text strong{font-weight:800;}
+.social-proof-time{font-size:11.5px; color:var(--slate-2); margin-top:3px;}
+.social-proof-close{background:none; border:none; color:var(--slate-2); font-size:17px; line-height:1; cursor:pointer; padding:2px; margin-left:2px; flex-shrink:0;}
+@media (max-width:480px){ .social-proof{left:12px; right:12px; max-width:none;} }
 </style>
 
 <div class="progress-shell" id="progressShell" hidden>
@@ -668,6 +699,24 @@ function zip3ToState(zip) {
       '<div class="eyebrow" style="text-align:center">FREE · NO OBLIGATION</div>' +
       '<h1 class="headline" style="text-align:center">Find a Medicare Advantage plan that actually fits your life.</h1>' +
       '<p class="sub" style="text-align:center; margin-inline:auto">Answer a few quick questions about what matters most to you — dental, vision, groceries, keeping costs low. We’ll match you with the top plans available where you live.</p>';
+
+    var benefits = el("div", "hero-benefits");
+    var benefitsGrid = el("div", "hero-benefit-grid");
+    var HERO_BENEFITS = [
+      ["🛒", "Groceries & OTC allowance"],
+      ["💰", "Money added back to your Social Security check"],
+      ["🦷", "Dental, vision & hearing coverage"],
+      ["💵", "Plans available as low as $0/month"]
+    ];
+    HERO_BENEFITS.forEach(function(b){
+      var card = el("div", "hero-benefit-card");
+      card.innerHTML = '<div class="hero-benefit-ico">' + b[0] + '</div><div class="hero-benefit-text">' + b[1] + '</div>';
+      benefitsGrid.appendChild(card);
+    });
+    benefits.appendChild(el("div", "hero-benefits-label", "Benefits you could unlock"));
+    benefits.appendChild(benefitsGrid);
+    s.appendChild(benefits);
+
     var btnWrap = el("div", "", "");
     btnWrap.style.cssText = "display:flex; flex-direction:column; align-items:center; margin-top:26px;";
     var btn = el("button", "btn btn-gold", "Find My Plan &nbsp;→");
@@ -1288,6 +1337,61 @@ function zip3ToState(zip) {
     app.appendChild(s);
   }
 
+  // ── Social proof toast ──────────────────────────────────
+  var SOCIAL_PROOF_NAMES = [
+    "Linda M.", "Robert T.", "Patricia G.", "James W.", "Barbara S.", "Carol H.",
+    "Donald R.", "Betty A.", "Richard P.", "Nancy K.", "Charles B.", "Sandra L.",
+    "Joseph D.", "Ruth F.", "Kenneth M.", "Dorothy C.", "Gary S.", "Judith N."
+  ];
+  var SOCIAL_PROOF_STATES = ["TX","FL","OH","GA","NC","PA","MI","AZ","IN","TN","MO","WI","AL","SC","OK","VA"];
+  var SOCIAL_PROOF_BENEFITS = [
+    { text:"in dental, vision & hearing benefits", unit:"/yr", min:800, max:2400 },
+    { text:"in groceries & OTC allowance", unit:"/yr", min:600, max:1800 },
+    { text:"added back to their Social Security check", unit:"/mo", min:40, max:170 },
+    { text:"in extra plan benefits", unit:"/yr", min:900, max:3200 }
+  ];
+  var socialProofEl = null;
+  function randPick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function randInt(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function ensureSocialProofEl(){
+    if (!socialProofEl){
+      socialProofEl = el("div", "social-proof");
+      socialProofEl.setAttribute("role", "status");
+      document.body.appendChild(socialProofEl);
+    }
+    return socialProofEl;
+  }
+  function showSocialProofToast(){
+    var box = ensureSocialProofEl();
+    var name = randPick(SOCIAL_PROOF_NAMES);
+    var state = randPick(SOCIAL_PROOF_STATES);
+    var benefit = randPick(SOCIAL_PROOF_BENEFITS);
+    var amount = randInt(benefit.min, benefit.max);
+    var initials = name.replace(/[^A-Za-z ]/g, "").split(" ").map(function(p){ return p.charAt(0); }).join("");
+    var minsAgo = randInt(2, 47);
+    box.innerHTML =
+      '<div class="social-proof-avatar">' + initials + '</div>' +
+      '<div style="flex:1;">' +
+        '<div class="social-proof-text"><strong>' + name + '</strong> from ' + state + ' just enrolled and gained <strong>' + fmt(amount) + benefit.unit + '</strong> ' + benefit.text + '</div>' +
+        '<div class="social-proof-time">' + minsAgo + ' minutes ago</div>' +
+      '</div>' +
+      '<button type="button" class="social-proof-close" aria-label="Dismiss">×</button>';
+    box.classList.add("show");
+    var hideTimer = setTimeout(dismiss, 6000);
+    box.querySelector(".social-proof-close").onclick = function(){ clearTimeout(hideTimer); dismiss(); };
+    function dismiss(){
+      box.classList.remove("show");
+      scheduleNextToast(randInt(10000, 22000));
+    }
+  }
+  function scheduleNextToast(delay){
+    setTimeout(showSocialProofToast, delay);
+  }
+  function startSocialProof(){
+    scheduleNextToast(randInt(4000, 8000));
+  }
+
   render();
+  startSocialProof();
 })();
 </script>
