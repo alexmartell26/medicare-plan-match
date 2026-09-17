@@ -290,11 +290,6 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 }
 .pic-seg-label{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; opacity:.8;}
 .pic-seg-value{font-family:'Fraunces',serif; font-weight:700; font-size:18px; font-variant-numeric:tabular-nums;}
-.pic-copy{
-  margin-top:clamp(8px,2vw,14px); background:rgba(255,255,255,.14); color:#fff; border:1.5px solid rgba(255,255,255,.35);
-  border-radius:9px; padding:7px 15px; font-size:12.5px; font-weight:700; cursor:pointer;
-}
-.pic-copy:hover{background:rgba(255,255,255,.22);}
 
 .call-btn{
   display:flex; align-items:center; justify-content:center; gap:14px;
@@ -603,6 +598,34 @@ function zip3ToState(zip) {
   function hideStickyCta(){
     if (stickyCtaEl) stickyCtaEl.hidden = true;
   }
+  var stickyShadowObserver = null;
+  function stopStickyShadow(){
+    if (stickyShadowObserver){ stickyShadowObserver.disconnect(); stickyShadowObserver = null; }
+  }
+  // Keeps an inline element in its normal position, but shows a fixed-bottom
+  // clone of it only once the inline original scrolls out of view — so the
+  // page isn't cluttered with a permanent sticky bar while the real button
+  // is still on screen.
+  function showStickyShadowOf(inlineEl){
+    stopStickyShadow();
+    var shadowEl = inlineEl.cloneNode(true);
+    var wrap = ensureStickyCtaEl();
+    wrap.innerHTML = "";
+    wrap.appendChild(shadowEl);
+    wrap.hidden = true;
+    try {
+      // isIntersecting is true for even a 1px sliver of overlap, which reads as
+      // "still visible" technically but not to an actual user — so judge by the
+      // real intersection ratio instead: once less than half the button is
+      // showing, treat it as scrolled out of view and reveal the sticky one.
+      var steps = [];
+      for (var i = 0; i <= 20; i++) steps.push(i / 20);
+      stickyShadowObserver = new IntersectionObserver(function(entries){
+        wrap.hidden = entries[0].intersectionRatio > 0.5;
+      }, { threshold: steps });
+      stickyShadowObserver.observe(inlineEl);
+    } catch(e){}
+  }
 
   function planNumberFor(p){ return p._hnum + (p._segLabel ? "_" + p._segLabel : ""); }
   function setParam(key, val){
@@ -784,6 +807,7 @@ function zip3ToState(zip) {
   function render(){
     app.innerHTML = "";
     hideStickyCta();
+    stopStickyShadow();
     stopHoldCountdown();
     updateProgress();
     if (STEP === "hero") renderHero();
@@ -1396,18 +1420,6 @@ function zip3ToState(zip) {
       '<div class="pic-label">📋 Give the agent this Plan Number' + (hasSeg ? ' <u>and</u> Segment' : '') + '</div>' +
       '<div class="pic-value" id="picValue">' + (plan._hnum || plan.planId || "—") + '</div>' +
       (hasSeg ? '<div class="pic-seg"><span class="pic-seg-label">Segment</span><span class="pic-seg-value" id="picSegValue">' + plan._segLabel + '</span></div>' : '');
-    var copyBtn = el("button", "pic-copy", hasSeg ? "📋 Copy Plan Number + Segment" : "📋 Copy number");
-    copyBtn.type = "button";
-    copyBtn.onclick = function(){
-      try {
-        var copyText = hasSeg ? (plan._hnum + ", Segment " + plan._segLabel) : (plan.planId || "");
-        navigator.clipboard.writeText(copyText).then(function(){
-          copyBtn.textContent = "✓ Copied";
-          setTimeout(function(){ copyBtn.textContent = hasSeg ? "📋 Copy Plan Number + Segment" : "📋 Copy number"; }, 1800);
-        });
-      } catch(e){}
-    };
-    idBox.appendChild(copyBtn);
     card.appendChild(idBox);
 
     var urgencyBox = el("div", "urgency-box");
@@ -1425,9 +1437,10 @@ function zip3ToState(zip) {
         '<span class="call-btn-main">Tap to Call Now</span>' +
         '<span class="call-btn-sub">' + AGENT_PHONE_DISPLAY + ' · Connects instantly</span>' +
       '</span>';
+    card.appendChild(callLink);
     card.appendChild(el("div", "call-sub", hasSeg
-      ? "Have your Plan Number and Segment above ready when you call · TTY users call 711"
-      : "Have your Plan Number above ready when you call · TTY users call 711"));
+      ? "Have your Plan Number and Segment above ready when you call"
+      : "Have your Plan Number above ready when you call"));
 
     var trustRow = el("div", "confirm-trust");
     trustRow.innerHTML =
@@ -1445,12 +1458,12 @@ function zip3ToState(zip) {
 
     var disc = el("div", "disclaimer");
     disc.innerHTML =
-      '<p><strong>[AGENCY NAME]</strong> is a licensed insurance agency. Not connected with or endorsed by the U.S. Government or the federal Medicare program. We do not offer every plan available in your area — any information we provide is limited to the plans we do offer. Contact Medicare.gov, 1-800-MEDICARE, or your local SHIP for help with all of your options.</p>';
+      '<p>We represent multiple licensed insurance agencies. Not connected with or endorsed by the U.S. Government or the federal Medicare program. We do not offer every plan available in your area — any information we provide is limited to the plans we do offer. Contact Medicare.gov, 1-800-MEDICARE, or your local SHIP for help with all of your options.</p>';
     s.appendChild(disc);
 
     s.style.paddingBottom = "130px";
     app.appendChild(s);
-    showStickyElement(callLink);
+    showStickyShadowOf(callLink);
     startHoldCountdown();
   }
 
