@@ -1209,35 +1209,36 @@ function zip3ToState(zip) {
   function renderCoverage(){
     var shell = qStepShell(
       "About you", "Do you currently have any of these?",
-      "Select any that apply to you — or skip if none do.",
-      null, function(){ STEP = "dob"; render(); }, "Continue →", null
+      "Select the one that applies to you.",
+      null, function(){ STEP = "dob"; render(); }, null, null, true
     );
     var block = el("div", "q-block");
     var grid = el("div", "pill-grid");
     var covOptions = [["hasMedicaid","Medicaid","medicaid"],["hasVA","VA Benefits","vacoverage"],["hasTricare","TRICARE","tricare"],["hasEmployer","Employer Coverage","employer"]];
-    var covNextBtnRef;
-    function anyCovSelected(){ return covOptions.some(function(opt){ return !!S[opt[0]]; }); }
-    function updateCovNextLabel(){
-      if (covNextBtnRef) covNextBtnRef.textContent = anyCovSelected() ? "Continue →" : "No, Continue →";
-    }
     function updateCoverageParam(){
       var selected = covOptions.filter(function(opt){ return !!S[opt[0]]; }).map(function(opt){ return opt[2]; });
       setParam("additional_coverage", selected.join(","));
     }
+    function selectCoverage(selectedKey){
+      covOptions.forEach(function(opt){ S[opt[0]] = (opt[0] === selectedKey); });
+      updateCoverageParam();
+      updateSpecialNeedsParam();
+      STEP = "chronic"; render();
+    }
     covOptions.forEach(function(opt){
       var key = opt[0], label = opt[1];
-      var pill = el("button", "pill" + (S[key] ? " on" : ""), '<span class="pill-dot"></span>' + label);
+      var pill = el("button", "pill", '<span class="pill-dot"></span>' + label);
       pill.type = "button";
-      pill.onclick = function(){ S[key] = !S[key]; pill.classList.toggle("on"); updateCovNextLabel(); updateCoverageParam(); updateSpecialNeedsParam(); };
+      pill.onclick = function(){ selectCoverage(key); };
       grid.appendChild(pill);
     });
+    var noneBtn = el("button", "pill", '<span class="pill-dot"></span>None of these');
+    noneBtn.type = "button";
+    noneBtn.onclick = function(){ selectCoverage(null); };
+    grid.appendChild(noneBtn);
     block.appendChild(grid);
     block.appendChild(el("div", "snp-note", "ℹ️ If any of these apply, your licensed agent will make sure switching to a Medicare Advantage plan is the right move before anything changes."));
     shell.finishRow([block]);
-    var nextBtn = shell.s.querySelector(".btn-primary");
-    covNextBtnRef = nextBtn;
-    nextBtn.textContent = anyCovSelected() ? "Continue →" : "No, Continue →";
-    nextBtn.onclick = function(){ STEP = "chronic"; render(); };
   }
 
   function renderChronic(){
