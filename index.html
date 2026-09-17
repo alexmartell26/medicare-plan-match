@@ -263,29 +263,36 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 
 .plan-cta{padding:0 20px 20px;}
 
-/* Choose confirmation */
-.confirm-card{background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:26px 22px; text-align:center;}
-.confirm-check{width:64px; height:64px; border-radius:99px; background:var(--green-bg); color:var(--green); display:flex; align-items:center; justify-content:center; margin:0 auto 18px; font-size:32px;}
+/* Choose confirmation — sized with clamp() so it scales down on small
+   screens instead of eating the whole viewport before the call button. */
+.confirm-card{
+  background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:clamp(16px,5vw,26px) clamp(14px,4vw,22px); text-align:center;
+}
+.confirm-check{
+  width:clamp(40px,10vw,64px); height:clamp(40px,10vw,64px); border-radius:99px;
+  background:var(--green-bg); color:var(--green); display:flex; align-items:center;
+  justify-content:center; margin:0 auto clamp(8px,2vw,18px); font-size:clamp(20px,5vw,32px);
+}
 
 .plan-id-callout{
-  margin-top:22px; background:var(--navy); color:#fff; border-radius:14px; padding:20px;
-  text-align:center;
+  margin-top:clamp(12px,3vw,22px); background:var(--navy); color:#fff; border-radius:14px;
+  padding:clamp(12px,4vw,20px); text-align:center;
 }
-.pic-label{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; opacity:.85;}
+.pic-label{font-size:clamp(11px,3vw,13px); font-weight:700; letter-spacing:.04em; text-transform:uppercase; opacity:.85;}
 .pic-value{
-  font-family:'Fraunces',serif; font-weight:600; font-size:30px; letter-spacing:.02em;
-  margin:9px 0 8px; font-variant-numeric:tabular-nums; word-break:break-word;
+  font-family:'Fraunces',serif; font-weight:600; font-size:clamp(20px,7vw,30px); letter-spacing:.02em;
+  margin:clamp(5px,1.5vw,9px) 0 clamp(4px,1.5vw,8px); font-variant-numeric:tabular-nums; word-break:break-word;
 }
 .pic-seg{
   display:inline-flex; align-items:center; gap:9px; background:var(--gold-deep); color:var(--navy);
-  border-radius:99px; padding:7px 16px 7px 14px; margin:2px 0 12px;
+  border-radius:99px; padding:6px 14px 6px 12px; margin:2px 0 clamp(6px,2vw,12px);
 }
 .pic-seg-label{font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; opacity:.8;}
-.pic-seg-value{font-family:'Fraunces',serif; font-weight:700; font-size:20px; font-variant-numeric:tabular-nums;}
-.pic-sub{font-size:13px; opacity:.85; line-height:1.5; max-width:44ch; margin:0 auto;}
+.pic-seg-value{font-family:'Fraunces',serif; font-weight:700; font-size:18px; font-variant-numeric:tabular-nums;}
 .pic-copy{
-  margin-top:14px; background:rgba(255,255,255,.14); color:#fff; border:1.5px solid rgba(255,255,255,.35);
-  border-radius:9px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer;
+  margin-top:clamp(8px,2vw,14px); background:rgba(255,255,255,.14); color:#fff; border:1.5px solid rgba(255,255,255,.35);
+  border-radius:9px; padding:7px 15px; font-size:12.5px; font-weight:700; cursor:pointer;
 }
 .pic-copy:hover{background:rgba(255,255,255,.22);}
 
@@ -1380,7 +1387,7 @@ function zip3ToState(zip) {
     card.innerHTML =
       '<div class="confirm-check">✓</div>' +
       '<div class="eyebrow" style="text-align:center">Great choice</div>' +
-      '<h1 class="headline" style="text-align:center; font-size:26px;">You selected<br>' + (plan.n || "your plan") + '</h1>' +
+      '<h1 class="headline" style="text-align:center; font-size:clamp(19px,6.5vw,26px);">You selected<br>' + (plan.n || "your plan") + '</h1>' +
       '<p class="sub" style="text-align:center; margin-inline:auto;">A licensed insurance agent is ready to help you enroll in this plan, answer any questions, or compare it against other options — at no cost to you.</p>';
 
     var hasSeg = !!plan._segLabel;
@@ -1388,10 +1395,7 @@ function zip3ToState(zip) {
     idBox.innerHTML =
       '<div class="pic-label">📋 Give the agent this Plan Number' + (hasSeg ? ' <u>and</u> Segment' : '') + '</div>' +
       '<div class="pic-value" id="picValue">' + (plan._hnum || plan.planId || "—") + '</div>' +
-      (hasSeg ? '<div class="pic-seg"><span class="pic-seg-label">Segment</span><span class="pic-seg-value" id="picSegValue">' + plan._segLabel + '</span></div>' : '') +
-      '<div class="pic-sub">' + (hasSeg
-        ? 'This plan has more than one version in your area — the Segment number tells your agent <em>exactly which one</em>. Say both numbers first thing on the call.'
-        : 'Saying this number first lets your agent pull up <em>this exact plan</em> right away, instead of searching for it while you’re on the phone.') + '</div>';
+      (hasSeg ? '<div class="pic-seg"><span class="pic-seg-label">Segment</span><span class="pic-seg-value" id="picSegValue">' + plan._segLabel + '</span></div>' : '');
     var copyBtn = el("button", "pic-copy", hasSeg ? "📋 Copy Plan Number + Segment" : "📋 Copy number");
     copyBtn.type = "button";
     copyBtn.onclick = function(){
