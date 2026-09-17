@@ -576,6 +576,9 @@ function zip3ToState(zip) {
 
   var AGENT_PHONE_DISPLAY = "1-833-700-5509";
   var AGENT_PHONE_TEL = "+18337005509";
+  // Hero page only — every other call touchpoint uses AGENT_PHONE_TEL above.
+  var HERO_PHONE_DISPLAY = "1-844-656-4232";
+  var HERO_PHONE_TEL = "+18446564232";
 
   var S = {
     zip:"", state:"", county:"", priorities:{}, results:[], chosenPlan:null,
@@ -1044,7 +1047,7 @@ function zip3ToState(zip) {
 
     var callRow = el("div", "");
     callRow.style.cssText = "text-align:center; margin-top:18px;";
-    callRow.innerHTML = '<span style="font-size:13.5px;color:var(--slate)">Prefer to talk to someone right away? </span><a href="tel:' + AGENT_PHONE_TEL + '" style="font-size:13.5px;font-weight:800;color:var(--navy);text-decoration:underline;">Call ' + AGENT_PHONE_DISPLAY + '</a>';
+    callRow.innerHTML = '<span style="font-size:13.5px;color:var(--slate)">Prefer to talk to someone right away? </span><a href="tel:' + HERO_PHONE_TEL + '" style="font-size:13.5px;font-weight:800;color:var(--navy);text-decoration:underline;">Call ' + HERO_PHONE_DISPLAY + '</a>';
     s.appendChild(callRow);
 
     app.appendChild(s);
