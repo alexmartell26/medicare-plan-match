@@ -1092,7 +1092,7 @@ function zip3ToState(zip) {
     }
     function updateConditionParam(){
       var selected = CHRONIC_CONDITIONS.filter(function(c){ return !!S.chronicConditions[c]; });
-      setParam("condition", selected.join(","));
+      setParam("chronic_condition", selected.join(","));
     }
     CHRONIC_CONDITIONS.forEach(function(cond){
       var pill = el("button", "pill" + (S.chronicConditions[cond] ? " on" : ""), '<span class="pill-dot"></span>' + cond);
@@ -1340,7 +1340,7 @@ function zip3ToState(zip) {
         var chooseBtn = el("button", "btn btn-primary btn-full", "Choose This Plan");
         chooseBtn.onclick = (function(p){ return function(){
           S.chosenPlan = p;
-          setParam("plan_number", planNumberFor(p));
+          setParam("selected_plan_number", planNumberFor(p));
           STEP = "confirm"; render();
         }; })(plan);
         cta.appendChild(chooseBtn);
