@@ -1467,7 +1467,6 @@ function zip3ToState(zip) {
   }
 
   function renderResults(){
-    loadCallGrid();
     var s = el("div", "step");
     var backBtn = el("button", "back-link", "← Adjust what matters to you");
     backBtn.onclick = function(){ STEP = "priorities"; render(); };
@@ -1552,6 +1551,7 @@ function zip3ToState(zip) {
         chooseBtn.onclick = (function(p){ return function(){
           S.chosenPlan = p;
           setParam("selected_plan_number", planNumberFor(p));
+          loadCallGrid();
           STEP = "confirm"; render();
         }; })(plan);
         cta.appendChild(chooseBtn);
