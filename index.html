@@ -456,6 +456,7 @@ function zip3ToState(zip) {
   function el(tag, cls, html){ var d = document.createElement(tag); if(cls) d.className = cls; if(html!==undefined) d.innerHTML = html; return d; }
 
   // ── URL param tracking ──────────────────────────────────
+  function planNumberFor(p){ return p._hnum + (p._segLabel ? "_" + p._segLabel : ""); }
   function setParam(key, val){
     try {
       var url = new URL(window.location.href);
@@ -1078,6 +1079,9 @@ function zip3ToState(zip) {
       var candidates = buildCandidates(S.state, S.county);
       var ranked = scorePlans(candidates, S.priorities);
       S.results = ranked.slice(0, 3);
+      S.results.forEach(function(p, i){
+        setParam(i === 0 ? "plan_number" : "plan_number" + (i + 1), planNumberFor(p));
+      });
       STEP = "results"; render();
     }, 1300);
   }
@@ -1180,7 +1184,7 @@ function zip3ToState(zip) {
         var chooseBtn = el("button", "btn btn-primary btn-full", "Choose This Plan");
         chooseBtn.onclick = (function(p){ return function(){
           S.chosenPlan = p;
-          setParam("plan_number", p._hnum + (p._segLabel ? "_" + p._segLabel : ""));
+          setParam("plan_number", planNumberFor(p));
           STEP = "confirm"; render();
         }; })(plan);
         cta.appendChild(chooseBtn);
