@@ -367,7 +367,7 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .county-instruction{
   margin:18px 0 16px; background:var(--cream-2); border:2px solid var(--gold);
   border-radius:12px; padding:14px 16px; font-size:16px; font-weight:800;
-  color:var(--navy-deep); display:flex; gap:10px; align-items:center; line-height:1.35;
+  color:var(--ink); display:flex; gap:10px; align-items:center; line-height:1.35;
 }
 .county-instruction .arrow{font-size:22px; flex-shrink:0;}
 .back-link{display:inline-flex; align-items:center; gap:5px; font-size:13.5px; font-weight:700; color:var(--slate); cursor:pointer; margin-bottom:16px; background:none; border:none; padding:4px 0;}
@@ -1148,13 +1148,6 @@ function zip3ToState(zip) {
     var note = el("div", "county-note", "Not seeing your county? <a href=\"#\" id=\"allCountiesLink\" style=\"color:var(--navy);font-weight:700;\">Show all " + S.state + " counties</a>");
     field.appendChild(label); field.appendChild(list); field.appendChild(note);
 
-    var btnRow = el("div", "btn-row");
-    btnRow.style.flexDirection = "column"; btnRow.style.alignItems = "stretch";
-    var nextBtn = el("button", "btn btn-primary btn-full", "Continue →");
-    nextBtn.disabled = !S.county;
-    nextBtn.onclick = function(){ if (!S.county) return; STEP = "dob"; render(); };
-    btnRow.appendChild(nextBtn);
-
     function buildButtons(counties){
       list.innerHTML = "";
       counties.forEach(function(c){
@@ -1163,13 +1156,8 @@ function zip3ToState(zip) {
         btn.innerHTML = "<span>" + c + "</span><span class=\"choice-check\">" + (c === S.county ? checkSvg() : "") + "</span>";
         btn.onclick = function(){
           S.county = c;
-          list.querySelectorAll(".choice-btn").forEach(function(b){
-            b.classList.remove("on"); b.querySelector(".choice-check").innerHTML = "";
-          });
-          btn.classList.add("on");
-          btn.querySelector(".choice-check").innerHTML = checkSvg();
-          nextBtn.disabled = false;
           setParam("county", c);
+          STEP = "dob"; render();
         };
         list.appendChild(btn);
       });
@@ -1185,7 +1173,7 @@ function zip3ToState(zip) {
       });
     }, 0);
 
-    s.appendChild(field); s.appendChild(btnRow);
+    s.appendChild(field);
     app.appendChild(s);
   }
 
