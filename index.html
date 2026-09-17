@@ -1403,8 +1403,11 @@ function zip3ToState(zip) {
           '<div class="plan-id-tag">Plan #: <span>' + (plan._hnum || plan.planId) + '</span>' + (plan._segLabel ? ' &nbsp;·&nbsp; Segment: <span>' + plan._segLabel + '</span>' : '') + '</div>';
         card.appendChild(head2);
 
+        var totalAllowance = (plan.otc||0) + (plan.gro||0) + (plan.den||0) + (plan.vis||0) + (plan.hrg||0) + (plan.trn||0);
+
         var stats = el("div", "plan-stats");
         stats.innerHTML =
+          (totalAllowance > 0 ? '<div class="stat"><div class="stat-val positive">' + fmt(totalAllowance) + '/yr</div><div class="stat-lbl">Total allowance</div></div>' : '') +
           '<div class="stat"><div class="stat-val' + (plan.pc ? "" : " positive") + '">' + (plan.pc ? fmt(plan.pc) : "$0") + '</div><div class="stat-lbl">Monthly premium</div></div>' +
           (plan.sr ? '<div class="stat"><div class="plan-stars">★ ' + plan.sr + '/5</div></div>' : '');
         card.appendChild(stats);
@@ -1462,13 +1465,6 @@ function zip3ToState(zip) {
       '<p class="sub" style="text-align:center; margin-inline:auto;">A licensed insurance agent is ready to help you enroll in this plan, answer any questions, or compare it against other options — at no cost to you.</p>';
 
     var hasSeg = !!plan._segLabel;
-    var urgencyBox = el("div", "urgency-box");
-    urgencyBox.innerHTML =
-      '<div class="urgency-dot"></div>' +
-      '<div><div class="urgency-title">An agent is available and waiting for your call</div>' +
-      '<div class="urgency-sub">Your spot is held for <strong id="holdCountdown">2:00</strong> — just tap the button below to connect instantly</div></div>';
-    card.appendChild(urgencyBox);
-
     var idBox = el("div", "plan-id-callout");
     idBox.innerHTML =
       '<div class="pic-label">📋 Give the agent this Plan Number' + (hasSeg ? ' <u>and</u> Segment' : '') + '</div>' +
@@ -1485,6 +1481,14 @@ function zip3ToState(zip) {
         '<span class="call-btn-sub">' + AGENT_PHONE_DISPLAY + ' · Connects instantly</span>' +
       '</span>';
     card.appendChild(callLink);
+
+    var urgencyBox = el("div", "urgency-box");
+    urgencyBox.innerHTML =
+      '<div class="urgency-dot"></div>' +
+      '<div><div class="urgency-title">An agent is available and waiting for your call</div>' +
+      '<div class="urgency-sub">Your spot is held for <strong id="holdCountdown">2:00</strong> — tap above to connect instantly</div></div>';
+    card.appendChild(urgencyBox);
+
     card.appendChild(el("div", "call-sub", hasSeg
       ? "Have your Plan Number and Segment above ready when you call"
       : "Have your Plan Number above ready when you call"));
