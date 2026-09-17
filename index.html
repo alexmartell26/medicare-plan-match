@@ -248,6 +248,12 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .stat{}
 .stat-val{font-family:'Fraunces',serif; font-size:22px; font-weight:600; font-variant-numeric:tabular-nums;}
 .stat-lbl{font-size:11.5px; color:var(--slate-2); font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-top:1px;}
+.stat-combined{
+  background:linear-gradient(0deg,var(--cream-2),var(--cream-2)),var(--card);
+  border:1.5px solid var(--gold); border-radius:10px; padding:6px 12px;
+}
+.stat-combined .stat-val{color:var(--gold-deep);}
+.stat-combined .stat-lbl{color:var(--gold-deep);}
 .plan-stars{display:inline-flex; align-items:center; gap:4px; font-size:13.5px; font-weight:700; color:var(--gold-deep); background:var(--cream-2); padding:4px 10px; border-radius:99px;}
 
 .plan-benefits{border-top:1px solid var(--line); padding:14px 20px 18px; display:flex; flex-direction:column; gap:9px;}
@@ -646,8 +652,12 @@ function zip3ToState(zip) {
   }
   function showBenefitModal(){
     ensureBenefitModalEl().classList.add("show");
+    try { benefitAudioEl.currentTime = 0; } catch(e){}
+    var p = benefitAudioEl.play();
+    if (p && p.catch) p.catch(function(){});
   }
   function hideBenefitModal(){
+    benefitAudioEl.pause();
     if (benefitModalEl) benefitModalEl.classList.remove("show");
   }
   document.addEventListener("keydown", function(e){
@@ -737,6 +747,7 @@ function zip3ToState(zip) {
     if (p && p.catch) p.catch(function(){});
   }
   var idleAudioEl = new Audio("audio/idle.mp3");
+  var benefitAudioEl = new Audio("audio/benefitpopup.mp3");
 
   // ── Idle nudge: pulse the current primary action after 10s of no activity ──
   var idleTimer = null;
@@ -1520,11 +1531,13 @@ function zip3ToState(zip) {
 
         var totalAllowance = (plan.otc||0) + (plan.gro||0) + (plan.den||0) + (plan.vis||0) + (plan.hrg||0) + (plan.trn||0);
         var givebackAnnual = (plan.gb||0) * 12;
+        var hasBoth = totalAllowance > 0 && givebackAnnual > 0;
 
         var stats = el("div", "plan-stats");
         stats.innerHTML =
           (totalAllowance > 0 ? '<div class="stat"><div class="stat-val positive">' + fmt(totalAllowance) + '/yr</div><div class="stat-lbl">Total allowance</div></div>' : '') +
           (givebackAnnual > 0 ? '<div class="stat"><div class="stat-val positive">' + fmt(givebackAnnual) + '/yr</div><div class="stat-lbl">Part B giveback</div></div>' : '') +
+          (hasBoth ? '<div class="stat stat-combined"><div class="stat-val">' + fmt(totalAllowance + givebackAnnual) + '/yr</div><div class="stat-lbl">Combined value</div></div>' : '') +
           '<div class="stat"><div class="stat-val' + (plan.pc ? "" : " positive") + '">' + (plan.pc ? fmt(plan.pc) : "$0") + '</div><div class="stat-lbl">Monthly premium</div></div>' +
           (plan.sr ? '<div class="stat"><div class="plan-stars">★ ' + plan.sr + '/5</div></div>' : '');
         card.appendChild(stats);
