@@ -1234,7 +1234,8 @@ function zip3ToState(zip) {
       var ranked = scorePlans(candidates, S.priorities);
       S.results = ranked.slice(0, 3);
       S.results.forEach(function(p, i){
-        setParam(i === 0 ? "plan_number" : "plan_number" + (i + 1), planNumberFor(p));
+        if (i === 0) return;
+        setParam("plan_number" + (i + 1), planNumberFor(p));
       });
       STEP = "results"; render();
     }, 1300);
