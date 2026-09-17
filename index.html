@@ -128,6 +128,13 @@ a{color:inherit;}
 .btn-ghost:hover{color:var(--ink);}
 .btn[disabled]{opacity:.45; cursor:not-allowed;}
 .btn-row{display:flex; flex-wrap:wrap; gap:12px; margin-top:26px; align-items:center;}
+.btn-row-sticky{
+  position:fixed; left:0; right:0; bottom:0; z-index:40; margin-top:0;
+  background:var(--cream); border-top:1px solid var(--line);
+  padding:14px 20px calc(14px + env(safe-area-inset-bottom,0px));
+  box-shadow:0 -8px 20px -12px rgba(28,37,48,.18);
+}
+.btn-row-sticky .btn-full{max-width:640px; margin-inline:auto;}
 
 .field-label{font-weight:700; font-size:14.5px; margin-bottom:8px; display:block;}
 .input{
@@ -240,7 +247,8 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .bene-row.match .bene-ico{background:var(--green-bg);}
 .bene-label{flex:1; color:var(--ink);}
 .bene-val{font-weight:700; font-variant-numeric:tabular-nums;}
-.bene-row.match .bene-val{color:var(--green);}
+.bene-val.positive{color:var(--green);}
+.stat-val.positive{color:var(--green);}
 .match-tag{font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; background:var(--green); color:#fff; padding:2px 7px; border-radius:99px;}
 
 .plan-cta{padding:0 20px 20px;}
@@ -325,6 +333,7 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
   transition:transform .35s ease, opacity .35s ease;
 }
 .social-proof.show{transform:translateY(0); opacity:1; pointer-events:auto;}
+.social-proof.above-sticky-cta{bottom:calc(96px + env(safe-area-inset-bottom,0px));}
 .social-proof-avatar{
   width:36px; height:36px; border-radius:50%; background:var(--navy); color:var(--gold);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;
@@ -1025,6 +1034,9 @@ function zip3ToState(zip) {
     block.appendChild(grid);
     block.appendChild(snpNote);
     shell.finishRow([block]);
+    shell.s.style.paddingBottom = "96px";
+    var btnRow = shell.s.querySelector(".btn-row");
+    btnRow.classList.add("btn-row-sticky");
     var nextBtn = shell.s.querySelector(".btn-primary");
     nextBtnRef = nextBtn;
     nextBtn.textContent = hasAnyChronicCondition() ? "Continue →" : "No, Continue →";
@@ -1035,26 +1047,18 @@ function zip3ToState(zip) {
     var shell = qStepShell(
       "About you", "Do you have a disability?",
       "This can affect which plans you’re eligible for — your agent will confirm the details.",
-      null, function(){ STEP = "chronic"; render(); }, "Continue →", null
+      null, function(){ STEP = "chronic"; render(); }, null, null, true
     );
     var block = el("div", "q-block");
     var row = el("div", "yn-row");
-    var disNextBtnRef;
-    function updateDisNextLabel(){
-      if (disNextBtnRef) disNextBtnRef.textContent = S.hasDisability === "yes" ? "Continue →" : "No, Continue →";
-    }
     var yesBtn = el("button", "yn-btn" + (S.hasDisability === "yes" ? " on" : ""), "Yes");
     var noBtn = el("button", "yn-btn" + (S.hasDisability === "no" ? " on" : ""), "No");
     yesBtn.type = "button"; noBtn.type = "button";
-    yesBtn.onclick = function(){ S.hasDisability = "yes"; yesBtn.classList.add("on"); noBtn.classList.remove("on"); updateDisNextLabel(); setParam("disability", "true"); };
-    noBtn.onclick = function(){ S.hasDisability = "no"; noBtn.classList.add("on"); yesBtn.classList.remove("on"); updateDisNextLabel(); setParam("disability", "false"); };
+    yesBtn.onclick = function(){ S.hasDisability = "yes"; setParam("disability", "true"); STEP = "priorities"; render(); };
+    noBtn.onclick = function(){ S.hasDisability = "no"; setParam("disability", "false"); STEP = "priorities"; render(); };
     row.appendChild(yesBtn); row.appendChild(noBtn);
     block.appendChild(row);
     shell.finishRow([block]);
-    var nextBtn = shell.s.querySelector(".btn-primary");
-    disNextBtnRef = nextBtn;
-    nextBtn.textContent = S.hasDisability === "yes" ? "Continue →" : "No, Continue →";
-    nextBtn.onclick = function(){ STEP = "priorities"; render(); };
   }
 
   function renderPriorities(){
@@ -1180,12 +1184,13 @@ function zip3ToState(zip) {
 
   function benefitRow(ico, label, value, isMatch, unit){
     unit = unit || "/yr";
-    var valTxt = value > 0 ? fmt(value) + unit : "Not included";
+    var hasValue = value > 0;
+    var valTxt = hasValue ? fmt(value) + unit : "Not included";
     return '<div class="bene-row' + (isMatch ? " match" : "") + '">' +
       '<div class="bene-ico">' + ico + '</div>' +
       '<div class="bene-label">' + label + '</div>' +
       (isMatch ? '<span class="match-tag">Priority</span>' : '') +
-      '<div class="bene-val">' + valTxt + '</div>' +
+      '<div class="bene-val' + (hasValue ? " positive" : "") + '">' + valTxt + '</div>' +
     '</div>';
   }
 
@@ -1248,7 +1253,7 @@ function zip3ToState(zip) {
 
         var stats = el("div", "plan-stats");
         stats.innerHTML =
-          '<div class="stat"><div class="stat-val">' + (plan.pc ? fmt(plan.pc) : "$0") + '</div><div class="stat-lbl">Monthly premium</div></div>' +
+          '<div class="stat"><div class="stat-val' + (plan.pc ? "" : " positive") + '">' + (plan.pc ? fmt(plan.pc) : "$0") + '</div><div class="stat-lbl">Monthly premium</div></div>' +
           (plan.sr ? '<div class="stat"><div class="plan-stars">★ ' + plan.sr + '/5</div></div>' : '');
         card.appendChild(stats);
 
@@ -1376,6 +1381,7 @@ function zip3ToState(zip) {
   }
   function showSocialProofToast(){
     var box = ensureSocialProofEl();
+    box.classList.toggle("above-sticky-cta", STEP === "chronic");
     var name = randPick(SOCIAL_PROOF_NAMES);
     var state = randPick(SOCIAL_PROOF_STATES);
     var benefit = randPick(SOCIAL_PROOF_BENEFITS);
