@@ -413,8 +413,8 @@ function zip3ToState(zip) {
 (function(){
   "use strict";
 
-  var AGENT_PHONE_DISPLAY = "[AGENT PHONE NUMBER]";
-  var AGENT_PHONE_TEL = "[AGENT PHONE NUMBER]";
+  var AGENT_PHONE_DISPLAY = "1-833-700-5509";
+  var AGENT_PHONE_TEL = "+18337005509";
 
   var S = {
     zip:"", state:"", county:"", priorities:{}, results:[], chosenPlan:null,
@@ -456,6 +456,16 @@ function zip3ToState(zip) {
   function el(tag, cls, html){ var d = document.createElement(tag); if(cls) d.className = cls; if(html!==undefined) d.innerHTML = html; return d; }
 
   // ── URL param tracking ──────────────────────────────────
+  function loadCallGrid(){
+    if (document.querySelector('script[src*="callgrid.com"]')) return;
+    var script = document.createElement('script');
+    script.src = 'https://cdn.callgrid.com/callgrid.js';
+    script.dataset.organizationId = 'cmd4xbl881dqgii07o9pkkily';
+    script.dataset.campaignSourceId = 'cmu4sul2607gm07jspo70zp24';
+    script.async = true;
+    document.head.appendChild(script);
+  }
+
   function planNumberFor(p){ return p._hnum + (p._segLabel ? "_" + p._segLabel : ""); }
   function setParam(key, val){
     try {
@@ -1108,6 +1118,7 @@ function zip3ToState(zip) {
   }
 
   function renderResults(){
+    loadCallGrid();
     var s = el("div", "step");
     var backBtn = el("button", "back-link", "← Adjust what matters to you");
     backBtn.onclick = function(){ STEP = "priorities"; render(); };
