@@ -308,6 +308,16 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .pulse-call{animation:callPulse 1.7s ease-in-out infinite;}
 .pulse-call:hover, .pulse-call:focus-visible{animation-play-state:paused;}
 @media (prefers-reduced-motion: reduce){ .pulse-call{animation:none;} }
+
+/* Idle nudge: after 10s with no interaction, gently pulse whatever the
+   current primary action is, as a hint rather than a permanent decoration —
+   so it's a short, finite run, not an infinite loop like the CTA buttons. */
+@keyframes attentionPulse{
+  0%,100%{ transform:scale(1); }
+  50%{ transform:scale(1.05); }
+}
+.pulse-attention{animation:attentionPulse 1s ease-in-out 4;}
+@media (prefers-reduced-motion: reduce){ .pulse-attention{animation:none;} }
 .call-sub{font-size:13px; color:var(--slate-2); margin-top:10px;}
 
 .urgency-box{
@@ -380,7 +390,7 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 }
 .social-proof.show{transform:translateY(0); opacity:1; pointer-events:auto;}
 .social-proof.above-sticky-cta{bottom:calc(96px + env(safe-area-inset-bottom,0px));}
-.social-proof.above-sticky-cta-tall{bottom:calc(150px + env(safe-area-inset-bottom,0px));}
+.social-proof.above-sticky-cta-tall{bottom:calc(168px + env(safe-area-inset-bottom,0px));}
 .social-proof-avatar{
   width:36px; height:36px; border-radius:50%; background:var(--navy); color:var(--gold);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;
@@ -547,7 +557,6 @@ function zip3ToState(zip) {
     { key:"vision",   label:"Vision (glasses/contacts)", ico:"👓", field:"vis" },
     { key:"hearing",  label:"Hearing aids",             ico:"👂", field:"hrg" },
     { key:"transport",label:"Rides to appointments",     ico:"🚗", field:"trn" },
-    { key:"premium",  label:"Low monthly premium",       ico:"💵", field:"pc" },
     { key:"moop",     label:"Protection from big bills",  ico:"🛡️", field:"mp" },
     { key:"rating",   label:"Highly-rated plan",          ico:"⭐", field:"sr" }
   ];
@@ -625,6 +634,43 @@ function zip3ToState(zip) {
       }, { threshold: steps });
       stickyShadowObserver.observe(inlineEl);
     } catch(e){}
+  }
+
+  // ── Idle nudge: pulse the current primary action after 10s of no activity ──
+  var idleTimer = null;
+  var pulsedEls = [];
+  function clearAttentionPulse(){
+    pulsedEls.forEach(function(elx){ elx.classList.remove("pulse-attention"); });
+    pulsedEls = [];
+  }
+  function getPrimaryActionEls(){
+    // A visible sticky CTA is always the thing to act on next.
+    if (stickyCtaEl && !stickyCtaEl.hidden){
+      var stickyBtn = stickyCtaEl.querySelector("button, a");
+      if (stickyBtn) return [stickyBtn];
+    }
+    var stepEl = app.querySelector(".step");
+    if (!stepEl) return [];
+    // Yes/No questions (Parts A/B, disability): nudge both options together.
+    var ynRow = stepEl.querySelector(".yn-row");
+    if (ynRow) return Array.prototype.slice.call(ynRow.querySelectorAll(".yn-btn"));
+    // Results: nudge toward the top (best) match's choose button.
+    var chooseBtn = stepEl.querySelector(".plan-cta .btn-primary");
+    if (chooseBtn) return [chooseBtn];
+    // Otherwise, whatever the step's own enabled primary button is.
+    var primaryBtn = stepEl.querySelector(".btn-primary:not([disabled])");
+    if (primaryBtn) return [primaryBtn];
+    return [];
+  }
+  function triggerAttentionPulse(){
+    clearAttentionPulse();
+    pulsedEls = getPrimaryActionEls();
+    pulsedEls.forEach(function(elx){ elx.classList.add("pulse-attention"); });
+  }
+  function resetIdleTimer(){
+    clearTimeout(idleTimer);
+    clearAttentionPulse();
+    idleTimer = setTimeout(triggerAttentionPulse, 10000);
   }
 
   function planNumberFor(p){ return p._hnum + (p._segLabel ? "_" + p._segLabel : ""); }
@@ -745,7 +791,7 @@ function zip3ToState(zip) {
       if (dir[f] < 0) n = 1 - n;
       return n;
     }
-    var fieldMap = { dental:["den"], vision:["vis"], hearing:["hrg"], groceries:["otc","gro"], transport:["trn"], premium:["pc"], moop:["mp"], giveback:["gb"], rating:["sr"] };
+    var fieldMap = { dental:["den"], vision:["vis"], hearing:["hrg"], groceries:["otc","gro"], transport:["trn"], moop:["mp"], giveback:["gb"], rating:["sr"] };
 
     // Groceries/OTC ("otc" + "gro") is a combined benefit — most plans populate only
     // "otc" and leave "gro" at 0, so normalizing and weighting the two fields
@@ -823,6 +869,7 @@ function zip3ToState(zip) {
     else if (STEP === "results") renderResults();
     else if (STEP === "confirm") renderConfirm();
     window.scrollTo({top:0, behavior:"instant"});
+    resetIdleTimer();
   }
 
   function renderHero(){
@@ -831,7 +878,7 @@ function zip3ToState(zip) {
       '<div class="brandbar"><div class="brandmark">✚</div><div class="brandname">Medicare Plan Match</div></div>' +
       '<div class="eyebrow" style="text-align:center">FREE · NO OBLIGATION</div>' +
       '<h1 class="headline" style="text-align:center">Find a Medicare Advantage plan that actually fits your life.</h1>' +
-      '<p class="sub" style="text-align:center; margin-inline:auto">Answer a few quick questions about what matters most to you — dental, vision, groceries, keeping costs low. We’ll match you with the top plans available where you live.</p>';
+      '<p class="sub" style="text-align:center; margin-inline:auto">Answer a few quick questions about <strong>what benefit allowances matters most to you — dental, vision, groceries, and more</strong>. We’ll match you with the top plans available where you live.</p>';
 
     var btnWrap = el("div", "", "");
     btnWrap.style.cssText = "display:flex; flex-direction:column; align-items:center; margin-top:26px;";
@@ -1415,19 +1462,19 @@ function zip3ToState(zip) {
       '<p class="sub" style="text-align:center; margin-inline:auto;">A licensed insurance agent is ready to help you enroll in this plan, answer any questions, or compare it against other options — at no cost to you.</p>';
 
     var hasSeg = !!plan._segLabel;
-    var idBox = el("div", "plan-id-callout");
-    idBox.innerHTML =
-      '<div class="pic-label">📋 Give the agent this Plan Number' + (hasSeg ? ' <u>and</u> Segment' : '') + '</div>' +
-      '<div class="pic-value" id="picValue">' + (plan._hnum || plan.planId || "—") + '</div>' +
-      (hasSeg ? '<div class="pic-seg"><span class="pic-seg-label">Segment</span><span class="pic-seg-value" id="picSegValue">' + plan._segLabel + '</span></div>' : '');
-    card.appendChild(idBox);
-
     var urgencyBox = el("div", "urgency-box");
     urgencyBox.innerHTML =
       '<div class="urgency-dot"></div>' +
       '<div><div class="urgency-title">An agent is available and waiting for your call</div>' +
       '<div class="urgency-sub">Your spot is held for <strong id="holdCountdown">2:00</strong> — just tap the button below to connect instantly</div></div>';
     card.appendChild(urgencyBox);
+
+    var idBox = el("div", "plan-id-callout");
+    idBox.innerHTML =
+      '<div class="pic-label">📋 Give the agent this Plan Number' + (hasSeg ? ' <u>and</u> Segment' : '') + '</div>' +
+      '<div class="pic-value" id="picValue">' + (plan._hnum || plan.planId || "—") + '</div>' +
+      (hasSeg ? '<div class="pic-seg"><span class="pic-seg-label">Segment</span><span class="pic-seg-value" id="picSegValue">' + plan._segLabel + '</span></div>' : '');
+    card.appendChild(idBox);
 
     var callLink = el("a", "call-btn pulse-call");
     callLink.href = "tel:" + AGENT_PHONE_TEL;
@@ -1548,6 +1595,11 @@ function zip3ToState(zip) {
   function startSocialProof(){
     scheduleNextToast(randInt(4000, 8000));
   }
+
+  ["click","touchstart","keydown","input"].forEach(function(evt){
+    document.addEventListener(evt, resetIdleTimer, { passive: true });
+  });
+  window.addEventListener("scroll", resetIdleTimer, { passive: true });
 
   render();
   startSocialProof();
