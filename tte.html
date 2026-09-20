@@ -749,7 +749,7 @@ function zip3ToState(zip) {
     partsab: "audio/step1.mp3", zip: "audio/step2.mp3", county: "audio/step3.mp3",
     dob: "audio/step4.mp3", coverage: "audio/step5.mp3", chronic: "audio/step6.mp3",
     disability: "audio/step7.mp3", priorities: "audio/step8.mp3", results: "audio/step9.mp3",
-    confirm: "audio/call.mp3"
+    confirm: "audio/call.mp3", benefitsCall: "audio/benefitscall.mp3"
   };
   var stepAudioEl = new Audio();
   var currentStepAudioKey = null;
@@ -799,7 +799,7 @@ function zip3ToState(zip) {
     pulsedEls = getPrimaryActionEls();
     pulsedEls.forEach(function(elx){ elx.classList.add("pulse-attention"); });
     // Skip if the step's own narration is still playing, so they don't overlap.
-    if (STEP !== "hero" && STEP !== "confirm" && stepAudioEl.paused){
+    if (STEP !== "hero" && STEP !== "confirm" && STEP !== "benefitsCall" && stepAudioEl.paused){
       try { idleAudioEl.currentTime = 0; } catch(e){}
       var p = idleAudioEl.play();
       if (p && p.catch) p.catch(function(){});
