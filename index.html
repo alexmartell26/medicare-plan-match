@@ -616,7 +616,11 @@ function zip3ToState(zip) {
     return max;
   }
   function getLpStyle(){
-    try { return new URLSearchParams(window.location.search).get("lpstyle") || ""; } catch(e){ return ""; }
+    // TEMPORARY: force selectedbenefits for all traffic regardless of the
+    // actual lpstyle param. To revert, delete this line and uncomment the
+    // one below it.
+    return "selectedbenefits";
+    // try { return new URLSearchParams(window.location.search).get("lpstyle") || ""; } catch(e){ return ""; }
   }
 
   function fmt(n){ n = n||0; return "$" + Math.round(n).toLocaleString(); }
