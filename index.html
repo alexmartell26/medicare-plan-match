@@ -289,6 +289,8 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .call-btn-text{display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;}
 .call-btn-main{font-size:24px; font-weight:800; letter-spacing:.01em;}
 .call-btn-sub{font-size:14px; font-weight:700; opacity:.85; font-variant-numeric:tabular-nums;}
+.call-btn.number-pending .call-btn-sub-real{display:none;}
+.call-btn:not(.number-pending) .call-btn-sub-loading{display:none;}
 @keyframes callPulse{
   0%,100%{ transform:scale(1); box-shadow:0 0 0 0 rgba(37,211,102,.55); }
   50%{ transform:scale(1.045); box-shadow:0 0 0 14px rgba(37,211,102,0); }
@@ -631,6 +633,40 @@ function zip3ToState(zip) {
     document.head.appendChild(script);
   }
 
+  // CallGrid swaps in a dynamic number a moment after it loads — showing the
+  // static number first and then flipping it looks broken. So the real
+  // number stays in the DOM (href + text) the whole time, so CallGrid can
+  // still find and replace it, but is masked behind a neutral "loading"
+  // label until a swap is observed (or a fallback timeout, in case CallGrid
+  // is blocked/slow), then revealed once settled.
+  function createCallButton(){
+    var callLink = el("a", "call-btn pulse-call number-pending");
+    callLink.href = "tel:" + AGENT_PHONE_TEL;
+    callLink.innerHTML =
+      '<span class="call-btn-icon">📞</span>' +
+      '<span class="call-btn-text">' +
+        '<span class="call-btn-main">Tap to Call Now</span>' +
+        '<span class="call-btn-sub call-btn-sub-real">' + AGENT_PHONE_DISPLAY + ' · Connects instantly</span>' +
+        '<span class="call-btn-sub call-btn-sub-loading">Connects instantly</span>' +
+      '</span>';
+    var revealTimer = null;
+    var observer;
+    function reveal(){
+      callLink.classList.remove("number-pending");
+      if (observer) observer.disconnect();
+    }
+    function scheduleReveal(delay){
+      clearTimeout(revealTimer);
+      revealTimer = setTimeout(reveal, delay);
+    }
+    try {
+      observer = new MutationObserver(function(){ scheduleReveal(200); });
+      observer.observe(callLink, { attributes: true, childList: true, subtree: true, characterData: true });
+    } catch(e){}
+    scheduleReveal(2000);
+    return callLink;
+  }
+
   // ── Benefit-card "let's see what you qualify for" modal ──
   var benefitModalEl = null;
   function ensureBenefitModalEl(){
@@ -712,10 +748,7 @@ function zip3ToState(zip) {
   // is still on screen.
   function showStickyShadowOf(inlineEl){
     stopStickyShadow();
-    var shadowEl = inlineEl.cloneNode(true);
     var wrap = ensureStickyCtaEl();
-    wrap.innerHTML = "";
-    wrap.appendChild(shadowEl);
     wrap.hidden = true;
     try {
       // isIntersecting is true for even a 1px sliver of overlap, which reads as
@@ -725,7 +758,16 @@ function zip3ToState(zip) {
       var steps = [];
       for (var i = 0; i <= 20; i++) steps.push(i / 20);
       stickyShadowObserver = new IntersectionObserver(function(entries){
-        setStickyCtaVisible(wrap, entries[0].intersectionRatio <= 0.5);
+        var shouldShow = entries[0].intersectionRatio <= 0.5;
+        if (shouldShow){
+          // Clone fresh each time it's revealed (not once up front), so it
+          // always mirrors the original's current state — e.g. a phone
+          // number CallGrid already swapped in, rather than a stale copy
+          // frozen at page-render time.
+          wrap.innerHTML = "";
+          wrap.appendChild(inlineEl.cloneNode(true));
+        }
+        setStickyCtaVisible(wrap, shouldShow);
       }, { threshold: steps });
       stickyShadowObserver.observe(inlineEl);
     } catch(e){}
@@ -1339,6 +1381,10 @@ function zip3ToState(zip) {
   }
 
   function renderPriorities(){
+    // selectedbenefits skips picking a specific plan, so this is effectively
+    // its "landing on the call page is coming soon" moment — load CallGrid
+    // here instead of waiting for the benefits-call page itself.
+    if (getLpStyle() === "selectedbenefits") loadCallGrid();
     var s = el("div", "step");
     var backLink = el("button", "back-link", "← Back");
     backLink.type = "button";
@@ -1585,14 +1631,7 @@ function zip3ToState(zip) {
       (hasSeg ? '<div class="pic-seg"><span class="pic-seg-label">Segment</span><span class="pic-seg-value" id="picSegValue">' + plan._segLabel + '</span></div>' : '');
     card.appendChild(idBox);
 
-    var callLink = el("a", "call-btn pulse-call");
-    callLink.href = "tel:" + AGENT_PHONE_TEL;
-    callLink.innerHTML =
-      '<span class="call-btn-icon">📞</span>' +
-      '<span class="call-btn-text">' +
-        '<span class="call-btn-main">Tap to Call Now</span>' +
-        '<span class="call-btn-sub">' + AGENT_PHONE_DISPLAY + ' · Connects instantly</span>' +
-      '</span>';
+    var callLink = createCallButton();
     card.appendChild(callLink);
 
     var urgencyBox = el("div", "urgency-box");
@@ -1666,14 +1705,7 @@ function zip3ToState(zip) {
       card.appendChild(empty);
     }
 
-    var callLink = el("a", "call-btn pulse-call");
-    callLink.href = "tel:" + AGENT_PHONE_TEL;
-    callLink.innerHTML =
-      '<span class="call-btn-icon">📞</span>' +
-      '<span class="call-btn-text">' +
-        '<span class="call-btn-main">Tap to Call Now</span>' +
-        '<span class="call-btn-sub">' + AGENT_PHONE_DISPLAY + ' · Connects instantly</span>' +
-      '</span>';
+    var callLink = createCallButton();
     card.appendChild(callLink);
 
     var urgencyBox = el("div", "urgency-box");
@@ -1706,7 +1738,6 @@ function zip3ToState(zip) {
 
     s.style.paddingBottom = "130px";
     app.appendChild(s);
-    loadCallGrid();
     showStickyShadowOf(callLink);
     startHoldCountdown();
   }
