@@ -605,6 +605,30 @@ function zip3ToState(zip) {
   // step. Anything the consumer explicitly selects is scored as the next tier down
   // (effectively priority #3+), never above these two.
   var FORCED_PRIORITY_KEYS = ["groceries", "giveback"];
+  var PRIORITY_DEFS_BY_KEY = {};
+  PRIORITY_DEFS.forEach(function(d){ PRIORITY_DEFS_BY_KEY[d.key] = d; });
+
+  // Shared with the priorities step and the selectedbenefits call page, so
+  // both compute/display "up to $X" benefit amounts identically.
+  var AMOUNT_FIELDS = { dental:["den"], vision:["vis"], hearing:["hrg"], groceries:["otc","gro"], transport:["trn"], giveback:["gb"] };
+  var AMOUNT_SUFFIX = {
+    dental: "for dental care", vision: "for vision (glasses/contacts)", hearing: "for hearing aids",
+    groceries: "for groceries / OTC", transport: "for rides to appointments",
+    giveback: "added back to Social Security"
+  };
+  var AMOUNT_UNIT = { giveback: "/mo" };
+  function maxAmountForFields(candidates, fields){
+    var max = 0;
+    candidates.forEach(function(p){
+      var v = 0;
+      fields.forEach(function(f){ v += (p[f]||0); });
+      if (v > max) max = v;
+    });
+    return max;
+  }
+  function getLpStyle(){
+    try { return new URLSearchParams(window.location.search).get("lpstyle") || ""; } catch(e){ return ""; }
+  }
 
   function fmt(n){ n = n||0; return "$" + Math.round(n).toLocaleString(); }
   function el(tag, cls, html){ var d = document.createElement(tag); if(cls) d.className = cls; if(html!==undefined) d.innerHTML = html; return d; }
@@ -984,6 +1008,7 @@ function zip3ToState(zip) {
     else if (STEP === "matching") renderMatching();
     else if (STEP === "results") renderResults();
     else if (STEP === "confirm") renderConfirm();
+    else if (STEP === "benefitsCall") renderBenefitsCall();
     window.scrollTo({top:0, behavior:"instant"});
     playStepAudio();
     resetIdleTimer();
@@ -1343,28 +1368,12 @@ function zip3ToState(zip) {
     // county/eligibility combo, so each card promises a specific number instead of
     // a vague label — "up to" the highest allowance among plans they actually qualify for.
     var areaCandidates = buildCandidates(S.state, S.county);
-    var AMOUNT_FIELDS = { dental:["den"], vision:["vis"], hearing:["hrg"], groceries:["otc","gro"], transport:["trn"], giveback:["gb"] };
-    var AMOUNT_SUFFIX = {
-      dental: "for dental care", vision: "for vision (glasses/contacts)", hearing: "for hearing aids",
-      groceries: "for groceries / OTC", transport: "for rides to appointments",
-      giveback: "added back to Social Security"
-    };
-    var AMOUNT_UNIT = { giveback: "/mo" };
-    function maxAmountFor(fields){
-      var max = 0;
-      areaCandidates.forEach(function(p){
-        var v = 0;
-        fields.forEach(function(f){ v += (p[f]||0); });
-        if (v > max) max = v;
-      });
-      return max;
-    }
 
     var grid = el("div", "pri-grid");
     PRIORITY_DEFS.forEach(function(def){
       var label = def.label;
       if (AMOUNT_FIELDS[def.key]){
-        var maxAmt = maxAmountFor(AMOUNT_FIELDS[def.key]);
+        var maxAmt = maxAmountForFields(areaCandidates, AMOUNT_FIELDS[def.key]);
         // No plan in this county offers this benefit — don't offer the option at all.
         if (maxAmt <= 0) return;
         label = "Up to " + fmt(maxAmt) + (AMOUNT_UNIT[def.key] || "/yr") + " " + AMOUNT_SUFFIX[def.key];
@@ -1422,6 +1431,10 @@ function zip3ToState(zip) {
     }, 420);
     setTimeout(function(){
       clearInterval(iv);
+      if (getLpStyle() === "selectedbenefits"){
+        STEP = "benefitsCall"; render();
+        return;
+      }
       var candidates = buildCandidates(S.state, S.county);
       var ranked = scorePlans(candidates, S.priorities);
       S.results = ranked.slice(0, 3);
@@ -1627,6 +1640,86 @@ function zip3ToState(zip) {
 
     s.style.paddingBottom = "130px";
     app.appendChild(s);
+    showStickyShadowOf(callLink);
+    startHoldCountdown();
+  }
+
+  // lpstyle=selectedbenefits ending: same question flow as the main page, but
+  // skips picking a specific plan — reports the highest available amount for
+  // each benefit the consumer selected, then sends straight to a call.
+  function renderBenefitsCall(){
+    var s = el("div", "step");
+    var card = el("div", "confirm-card");
+    card.innerHTML =
+      '<div class="confirm-check">✓</div>' +
+      '<div class="eyebrow" style="text-align:center">Great news</div>' +
+      '<h1 class="headline" style="text-align:center; font-size:clamp(19px,6.5vw,26px);">We Found Plans You Qualify For</h1>' +
+      '<p class="sub" style="text-align:center; margin-inline:auto;">We found Medicare Advantage plans in your area that you qualify for — with the benefit increases you want:</p>';
+
+    var candidates = buildCandidates(S.state, S.county);
+    var selected = Object.keys(S.priorities).filter(function(k){ return S.priorities[k]; });
+    var order = ["groceries","giveback","dental","vision","hearing","transport"];
+    var rows = "";
+    order.forEach(function(key){
+      if (selected.indexOf(key) === -1) return;
+      var fields = AMOUNT_FIELDS[key];
+      if (!fields) return;
+      var maxAmt = maxAmountForFields(candidates, fields);
+      if (maxAmt <= 0) return;
+      var def = PRIORITY_DEFS_BY_KEY[key];
+      rows += benefitRow(def.ico, def.label, maxAmt, true, AMOUNT_UNIT[key] || "/yr");
+    });
+    if (rows){
+      var bene = el("div", "plan-benefits");
+      bene.innerHTML = rows;
+      card.appendChild(bene);
+    } else {
+      var empty = el("div", "empty-note", "A licensed agent can walk you through the exact benefit amounts available to you.");
+      empty.style.margin = "18px 0";
+      card.appendChild(empty);
+    }
+
+    var callLink = el("a", "call-btn pulse-call");
+    callLink.href = "tel:" + AGENT_PHONE_TEL;
+    callLink.innerHTML =
+      '<span class="call-btn-icon">📞</span>' +
+      '<span class="call-btn-text">' +
+        '<span class="call-btn-main">Tap to Call Now</span>' +
+        '<span class="call-btn-sub">' + AGENT_PHONE_DISPLAY + ' · Connects instantly</span>' +
+      '</span>';
+    card.appendChild(callLink);
+
+    var urgencyBox = el("div", "urgency-box");
+    urgencyBox.innerHTML =
+      '<div class="urgency-dot"></div>' +
+      '<div><div class="urgency-title">An agent is available and waiting for your call</div>' +
+      '<div class="urgency-sub">Your spot is held for <strong id="holdCountdown">2:00</strong> — tap above to connect instantly</div></div>';
+    card.appendChild(urgencyBox);
+
+    card.appendChild(el("div", "call-sub", "Call now to speak with a licensed agent who will enroll you in a Medicare Advantage plan now"));
+
+    var trustRow = el("div", "confirm-trust");
+    trustRow.innerHTML =
+      '<span>✓ Licensed, certified agents</span>' +
+      '<span>✓ 100% free — no obligation</span>' +
+      '<span>🔒 Your info stays private</span>';
+    card.appendChild(trustRow);
+
+    var backBtn = el("button", "btn btn-ghost", "← Adjust what matters to you");
+    backBtn.style.marginTop = "18px";
+    backBtn.onclick = function(){ STEP = "priorities"; render(); };
+    card.appendChild(backBtn);
+
+    s.appendChild(card);
+
+    var disc = el("div", "disclaimer");
+    disc.innerHTML =
+      '<p>We represent multiple licensed insurance agencies. Not connected with or endorsed by the U.S. Government or the federal Medicare program. We do not offer every plan available in your area — any information we provide is limited to the plans we do offer. Contact Medicare.gov, 1-800-MEDICARE, or your local SHIP for help with all of your options.</p>';
+    s.appendChild(disc);
+
+    s.style.paddingBottom = "130px";
+    app.appendChild(s);
+    loadCallGrid();
     showStickyShadowOf(callLink);
     startHoldCountdown();
   }
