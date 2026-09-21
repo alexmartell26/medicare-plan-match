@@ -259,6 +259,7 @@ select.input{-webkit-appearance:none; appearance:none; background-image:url("dat
 .bene-label{flex:1; color:var(--ink);}
 .bene-val{font-weight:700; font-variant-numeric:tabular-nums;}
 .bene-val.positive{color:var(--green);}
+.bene-and-more{font-size:13px; color:var(--slate); font-style:italic; padding-left:36px;}
 .stat-val.positive{color:var(--green);}
 .match-tag{font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; background:var(--green); color:#fff; padding:2px 7px; border-radius:99px;}
 
@@ -1714,7 +1715,7 @@ function zip3ToState(zip) {
     });
     if (rows){
       var bene = el("div", "plan-benefits");
-      bene.innerHTML = rows;
+      bene.innerHTML = rows + '<div class="bene-and-more">…and more</div>';
       card.appendChild(bene);
     } else {
       var empty = el("div", "empty-note", "A licensed agent can walk you through the exact benefit amounts available to you.");
